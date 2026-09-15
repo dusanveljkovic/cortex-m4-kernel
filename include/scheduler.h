@@ -1,5 +1,5 @@
-#ifndef _SHEDULER_H
-#define _SHEDULER_H
+#ifndef _SCHEDULER_H
+#define _SCHEDULER_H
 
 #include "tcb.h"
 

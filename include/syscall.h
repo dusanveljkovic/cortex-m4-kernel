@@ -1,18 +1,27 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
+#include "semaphore.h"
 #include "stdint.h"
 #include "tcb.h"
 
 enum {
   SYS_YIELD = 0,
+  SYS_SEM_CREATE,
   SYS_SEM_WAIT,
   SYS_SEM_POST,
+  SYS_SEM_CLOSE,
   SYS_TASK_CREATE,
-  SYS_TASK_EXIT
+  SYS_TASK_EXIT,
 };
 
 void sys_yield(void);
+
+semaphore_t *sys_sem_create(uint32_t count);
+void sys_sem_wait(semaphore_t *sem);
+void sys_sem_post(semaphore_t *sem);
+void sys_sem_close(semaphore_t *sem);
+
 tcb_t *sys_task_create(uint8_t priority, void (*func)(void *), void *args);
 void sys_task_exit(void);
 void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,

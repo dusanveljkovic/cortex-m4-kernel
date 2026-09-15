@@ -11,7 +11,6 @@
 .global pend_sv_handler
 .align 2
 pend_sv_handler:
-  push {lr}
   cpsid i
   isb 
 

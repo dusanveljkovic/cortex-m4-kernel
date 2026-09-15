@@ -6,5 +6,6 @@
 void static_memory_init(void);
 
 tcb_t *alloc_task(void);
+semaphore_t *alloc_semaphore(void);
 
 #endif // !_STATIC_MEMORY_H

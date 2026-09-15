@@ -15,7 +15,8 @@ source/systick.c \
 source/scheduler.c \
 source/tcb.c \
 source/syscall.c \
-source/static_memory.c
+source/static_memory.c \
+source/semaphore.c
 
 FLAGS_INCLUDE = \
 -Iinclude

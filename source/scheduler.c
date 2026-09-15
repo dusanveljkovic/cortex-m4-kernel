@@ -22,6 +22,7 @@ void scheduler_init(void) {
 void scheduler_put_task(tcb_t *task) {
   if (task->state == TASK_FINISHED || task->state == TASK_BLOCKED)
     return;
+  task->state = TASK_READY;
 
   queue_push(&ready_queues[task->priority], task);
 }
@@ -46,9 +47,15 @@ void scheduler_select_next(void) {
 
 tcb_t *queue_pop(tcb_list_t *q) {
   tcb_t *ret = q->head;
+  if (ret == 0)
+    return 0;
+
   q->head = q->head->next;
+
   if (q->head == 0)
     q->tail = 0;
+
+  ret->next = 0;
   return ret;
 }
 
