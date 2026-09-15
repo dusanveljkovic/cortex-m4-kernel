@@ -38,6 +38,7 @@ tcb_t *alloc_task(void) {
 void semaphore_memory_init(void) {
   for (int i = 0; i < N_SEMAPHORES; i++) {
     semaphore_slots[i].state = SEM_UNUSED;
+    semaphore_slots[i].references = 0;
     semaphore_slots[i].wait_queue.head = 0;
     semaphore_slots[i].wait_queue.tail = 0;
   }
@@ -45,10 +46,11 @@ void semaphore_memory_init(void) {
 
 semaphore_t *alloc_semaphore(void) {
   for (int i = 0; i < N_SEMAPHORES; i++) {
-    if (semaphore_slots[i].state == SEM_UNUSED ||
-        semaphore_slots[i].state == SEM_CLOSED) {
-      semaphore_slots[i].state = SEM_OPEN;
-      return &semaphore_slots[i];
+    semaphore_t *sem = &semaphore_slots[i];
+    if (sem->state == SEM_UNUSED ||
+        (sem->state == SEM_CLOSED && sem->references == 0)) {
+      sem->state = SEM_OPEN;
+      return sem;
     }
   }
 

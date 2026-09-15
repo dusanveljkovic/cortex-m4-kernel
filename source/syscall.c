@@ -46,13 +46,23 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
   }
   case SYS_SEM_WAIT: {
     semaphore_t *sem = (semaphore_t *)arg2;
-    should_yield = semaphore_wait(sem);
+    sem_result_t result = semaphore_wait(sem);
+    if (result == SEM_OK_YIELD)
+      should_yield = 1;
+    ret = (uint32_t *)result;
     break;
   }
   case SYS_SEM_POST: {
     semaphore_t *sem = (semaphore_t *)arg2;
-    semaphore_post(sem);
-    should_yield = 1;
+    sem_result_t result = semaphore_post(sem);
+    if (result == SEM_OK_YIELD)
+      should_yield = 1;
+    ret = (uint32_t *)result;
+    break;
+  }
+  case SYS_SEM_CLOSE: {
+    semaphore_t *sem = (semaphore_t *)arg2;
+    semaphore_close(sem);
     break;
   }
   case SYS_TASK_CREATE: {
