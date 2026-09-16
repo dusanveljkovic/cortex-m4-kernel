@@ -7,5 +7,6 @@ void static_memory_init(void);
 
 tcb_t *alloc_task(void);
 semaphore_t *alloc_semaphore(void);
+mutex_t *alloc_mutex(void);
 
 #endif // !_STATIC_MEMORY_H

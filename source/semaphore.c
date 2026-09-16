@@ -8,9 +8,6 @@ void semaphore_init(semaphore_t *sem, int count) {
   sem->wait_queue.tail = 0;
 }
 
-// current thread waits on semaphore
-// used by kernel
-// return 1 if current thread should yield
 sem_result_t semaphore_wait(semaphore_t *sem) {
   uint32_t irq_state = irq_save();
   if (sem->state != SEM_OPEN) {
@@ -27,7 +24,7 @@ sem_result_t semaphore_wait(semaphore_t *sem) {
 
     task->state = TASK_BLOCKED;
     task->waiting_on = sem;
-    task->waiting_on->references++;
+    ((semaphore_t *)task->waiting_on)->references++;
 
     queue_push(&sem->wait_queue, task);
   }
@@ -47,7 +44,7 @@ sem_result_t semaphore_post(semaphore_t *sem) {
 
   if (task != 0) {
     task->state = TASK_READY;
-    task->waiting_on->references--;
+    ((semaphore_t *)task->waiting_on)->references--;
     task->waiting_on = 0;
 
     scheduler_put_task(task);
@@ -65,4 +62,41 @@ void semaphore_close(semaphore_t *sem) {
     task = queue_pop(&sem->wait_queue);
   }
   sem->state = SEM_CLOSED;
+}
+
+void mutex_init(mutex_t *m) {
+  m->owner = 0;
+  m->wait_queue.head = 0;
+  m->wait_queue.tail = 0;
+}
+
+sem_result_t mutex_lock(mutex_t *m) {
+  if (m->owner == 0) {
+    m->owner = current_task;
+    return SEM_OK;
+  }
+  if (m->owner == current_task)
+    return MUTEX_DEADLOCK;
+
+  tcb_t *task = current_task;
+
+  task->state = TASK_BLOCKED;
+  task->waiting_on = m;
+
+  queue_push(&m->wait_queue, task);
+
+  return SEM_OK_YIELD;
+}
+sem_result_t mutex_unlock(mutex_t *m) {
+  if (m->owner != current_task) {
+    return MUTEX_NOT_OWNER;
+  }
+  tcb_t *next = queue_pop(&m->wait_queue);
+
+  m->owner = next;
+  if (next != 0) {
+    next->state = TASK_READY;
+    scheduler_put_task(next);
+  }
+  return SEM_OK;
 }

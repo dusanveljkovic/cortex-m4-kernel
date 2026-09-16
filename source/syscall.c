@@ -26,6 +26,12 @@ inline semaphore_t *sys_sem_create(uint32_t count) {
 inline void sys_sem_wait(semaphore_t *sem) { syscall(SYS_SEM_WAIT, sem, 0, 0); }
 inline void sys_sem_post(semaphore_t *sem) { syscall(SYS_SEM_POST, sem, 0, 0); }
 
+inline mutex_t *sys_mutex_create() {
+  return (mutex_t *)syscall(SYS_MUTEX_CREATE, 0, 0, 0);
+}
+inline void sys_mutex_lock(mutex_t *m) { syscall(SYS_MUTEX_LOCK, m, 0, 0); }
+inline void sys_mutex_unlock(mutex_t *m) { syscall(SYS_MUTEX_UNLOCK, m, 0, 0); }
+
 inline void sys_task_exit(void) { syscall(SYS_TASK_EXIT, 0, 0, 0); }
 
 void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
@@ -63,6 +69,28 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
   case SYS_SEM_CLOSE: {
     semaphore_t *sem = (semaphore_t *)arg2;
     semaphore_close(sem);
+    break;
+  }
+
+  case SYS_MUTEX_CREATE: {
+    ret = (uint32_t *)alloc_mutex();
+    mutex_init((mutex_t *)ret);
+    break;
+  }
+  case SYS_MUTEX_LOCK: {
+    mutex_t *m = (mutex_t *)arg2;
+    sem_result_t result = mutex_lock(m);
+    if (result == SEM_OK_YIELD)
+      should_yield = 1;
+    ret = (uint32_t *)result;
+    break;
+  }
+  case SYS_MUTEX_UNLOCK: {
+    mutex_t *m = (mutex_t *)arg2;
+    sem_result_t result = mutex_unlock(m);
+    if (result == SEM_OK_YIELD)
+      should_yield = 1;
+    ret = (uint32_t *)result;
     break;
   }
   case SYS_TASK_CREATE: {

@@ -7,10 +7,16 @@
 
 enum {
   SYS_YIELD = 0,
+
   SYS_SEM_CREATE,
   SYS_SEM_WAIT,
   SYS_SEM_POST,
   SYS_SEM_CLOSE,
+
+  SYS_MUTEX_CREATE,
+  SYS_MUTEX_LOCK,
+  SYS_MUTEX_UNLOCK,
+
   SYS_TASK_CREATE,
   SYS_TASK_EXIT,
 };
@@ -21,6 +27,11 @@ semaphore_t *sys_sem_create(uint32_t count);
 void sys_sem_wait(semaphore_t *sem);
 void sys_sem_post(semaphore_t *sem);
 void sys_sem_close(semaphore_t *sem);
+
+mutex_t *sys_mutex_create();
+void sys_mutex_lock(mutex_t *m);
+void sys_mutex_unlock(mutex_t *m);
+void sys_mutex_close(mutex_t *m);
 
 tcb_t *sys_task_create(uint8_t priority, void (*func)(void *), void *args);
 void sys_task_exit(void);

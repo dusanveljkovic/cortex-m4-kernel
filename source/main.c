@@ -8,47 +8,72 @@
 #include <stdint.h>
 
 static uint32_t data = 0;
-extern uint32_t *task_stack_init(uint32_t *stack_top, void (*func)(void));
 
 typedef struct {
   int number;
   semaphore_t *sem1;
   semaphore_t *sem2;
+  mutex_t *m;
 } wrapper_t;
 
 void add_task(void *arg) {
   wrapper_t w = *(wrapper_t *)arg;
+  int g = 2;
   while (1) {
+    sys_mutex_lock(w.m);
     data += w.number;
-    sys_sem_post(w.sem1);
-    sys_sem_wait(w.sem2);
+    g -= 1;
+    if (g <= 0) {
+      g = 2;
+      sys_mutex_unlock(w.m);
+    }
+    sys_yield();
+    // sys_sem_post(w.sem1);
+    // sys_sem_wait(w.sem2);
   }
 }
 
 void sub_task(void *arg) {
   wrapper_t w = *(wrapper_t *)arg;
+  int g = 2;
   while (1) {
+    sys_mutex_lock(w.m);
     data -= w.number;
-    sys_sem_post(w.sem2);
-    sys_sem_wait(w.sem1);
+    g -= 1;
+    if (g <= 0) {
+      g = 2;
+      sys_mutex_unlock(w.m);
+    }
+    sys_yield();
+    // sys_sem_post(w.sem2);
+    // sys_sem_wait(w.sem1);
   }
 }
 
-uint32_t main() {
+static wrapper_t arg1;
+static wrapper_t arg2;
+
+void user_main(void *arg) {
   data = 0;
+  semaphore_t *sem1 = sys_sem_create(0);
+  semaphore_t *sem2 = sys_sem_create(0);
+  mutex_t *m1 = sys_mutex_create();
+  arg1 = (wrapper_t){1, sem1, sem2, m1};
+  arg2 = (wrapper_t){1, sem1, sem2, m1};
+  tcb_t *t1 = sys_task_create(0, add_task, &arg1);
+  tcb_t *t2 = sys_task_create(0, sub_task, &arg2);
+  scheduler_put_task(t1);
+  scheduler_put_task(t2);
+}
+
+uint32_t main() {
   static_memory_init();
   scheduler_init();
 
   SCB->SHPR2 = 0xE0000000;
   SCB->SHPR3 = 0xE0F00000;
-  semaphore_t *sem1 = sys_sem_create(0);
-  semaphore_t *sem2 = sys_sem_create(0);
-  wrapper_t arg1 = {1, sem1, sem2};
-  wrapper_t arg2 = {1, sem1, sem2};
-  tcb_t *t1 = sys_task_create(0, add_task, &arg1);
-  tcb_t *t2 = sys_task_create(1, sub_task, &arg2);
-  scheduler_put_task(t1);
-  scheduler_put_task(t2);
+  tcb_t *user_task = sys_task_create(0, user_main, 0);
+  scheduler_put_task(user_task);
 
   // static tcb_t kernel;
   //

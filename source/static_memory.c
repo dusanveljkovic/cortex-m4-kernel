@@ -2,15 +2,17 @@
 #include "../include/tcb.h"
 #include "stdint.h"
 
-#define N_TASKS 2
-#define TASK_STACK_SIZE 128
+#define N_TASKS 8
+#define TASK_STACK_SIZE 256
 
 #define N_SEMAPHORES 32
+#define N_MUTEXES 32
 
 static tcb_t task_slots[N_TASKS];
 static uint32_t task_stacks[N_TASKS][TASK_STACK_SIZE];
 
 static semaphore_t semaphore_slots[N_SEMAPHORES];
+static mutex_t mutex_slots[N_MUTEXES];
 
 void task_memory_init(void) {
   for (int i = 0; i < N_TASKS; i++) {
@@ -57,7 +59,25 @@ semaphore_t *alloc_semaphore(void) {
   return 0;
 }
 
+void mutex_memory_init(void) {
+  for (int i = 0; i < N_MUTEXES; i++) {
+    mutex_slots[i].state = SEM_UNUSED;
+  }
+}
+
+mutex_t *alloc_mutex(void) {
+  for (int i = 0; i < N_MUTEXES; i++) {
+    mutex_t *m = &mutex_slots[i];
+    if (m->state == SEM_UNUSED) {
+      m->state = SEM_OPEN;
+      return m;
+    }
+  }
+  return 0;
+}
+
 void static_memory_init(void) {
   task_memory_init();
   semaphore_memory_init();
+  mutex_memory_init();
 }

@@ -23,7 +23,7 @@ typedef struct tcb {
   void (*function)(void *);
   void *args;
 
-  struct semaphore *waiting_on;
+  void *waiting_on;
 } tcb_t;
 
 tcb_t *create_task(uint8_t priority, void (*func)(void *), void *args);
