@@ -27,7 +27,29 @@ tcb_t *create_task(uint8_t priority, void (*func)(void *), void *args) {
   task->sp = task_stack_init(task->stack_top, task_wrapper);
   task->stack_size = 128;
   task->state = TASK_READY;
-  task->priority = priority;
+  task->base_priority = priority;
+  task->effective_priority = priority;
+  task->owned_mutexes = 0;
 
   return task;
+}
+
+void task_recalculate_priority(tcb_t *task) {
+  uint8_t priority = task->base_priority;
+
+  mutex_t *mutex = task->owned_mutexes;
+
+  while (mutex != 0) {
+    tcb_t *waiter = mutex->wait_queue.head;
+
+    while (waiter != 0) {
+      if (task->effective_priority > waiter->effective_priority)
+        priority = waiter->effective_priority;
+
+      waiter = waiter->next;
+    }
+
+    mutex = mutex->next_owned;
+  }
+  task->effective_priority = priority;
 }

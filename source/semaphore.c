@@ -68,11 +68,37 @@ void mutex_init(mutex_t *m) {
   m->owner = 0;
   m->wait_queue.head = 0;
   m->wait_queue.tail = 0;
+  m->next_owned = 0;
+}
+
+static void mutex_queue_push(mutex_t **head, mutex_t *m) {
+  m->next_owned = *head;
+  *head = m;
+}
+
+static void mutex_queue_remove(mutex_t **head, mutex_t *m) {
+  if (m == *head) {
+    *head = m->next_owned;
+    m->next_owned = 0;
+    return;
+  }
+  mutex_t *tmp = *head;
+  mutex_t *prev = 0;
+  while (tmp != 0) {
+    if (tmp == m) {
+      prev->next_owned = tmp->next_owned;
+      tmp->next_owned = 0;
+      return;
+    }
+    prev = tmp;
+    tmp = tmp->next_owned;
+  }
 }
 
 sem_result_t mutex_lock(mutex_t *m) {
   if (m->owner == 0) {
     m->owner = current_task;
+    mutex_queue_push(&current_task->owned_mutexes, m);
     return SEM_OK;
   }
   if (m->owner == current_task)
@@ -83,7 +109,9 @@ sem_result_t mutex_lock(mutex_t *m) {
   task->state = TASK_BLOCKED;
   task->waiting_on = m;
 
-  queue_push(&m->wait_queue, task);
+  priority_queue_push(&m->wait_queue, task);
+
+  task_recalculate_priority(m->owner);
 
   return SEM_OK_YIELD;
 }
@@ -91,12 +119,21 @@ sem_result_t mutex_unlock(mutex_t *m) {
   if (m->owner != current_task) {
     return MUTEX_NOT_OWNER;
   }
-  tcb_t *next = queue_pop(&m->wait_queue);
+  tcb_t *next = priority_queue_pop(&m->wait_queue);
 
   m->owner = next;
   if (next != 0) {
+    next->waiting_on = 0;
     next->state = TASK_READY;
-    scheduler_put_task(next);
+
+    mutex_queue_push(&next->owned_mutexes, m);
+    task_recalculate_priority(next);
   }
+  mutex_queue_remove(&current_task->owned_mutexes, m);
+
+  task_recalculate_priority(current_task);
+
+  scheduler_put_task(next);
+
   return SEM_OK;
 }

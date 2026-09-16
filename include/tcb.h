@@ -15,7 +15,10 @@ typedef enum {
 typedef struct tcb {
   uint32_t *sp;
   task_state_t state;
-  uint8_t priority;
+
+  uint8_t base_priority;
+  uint8_t effective_priority;
+
   uint32_t *stack_top;
   uint32_t stack_size;
   struct tcb *next;
@@ -24,8 +27,11 @@ typedef struct tcb {
   void *args;
 
   void *waiting_on;
+
+  struct mutex *owned_mutexes;
 } tcb_t;
 
 tcb_t *create_task(uint8_t priority, void (*func)(void *), void *args);
+void task_recalculate_priority(tcb_t *task);
 
 #endif // _TCB_H

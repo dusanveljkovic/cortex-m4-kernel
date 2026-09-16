@@ -33,6 +33,8 @@ typedef struct mutex {
   tcb_list_t wait_queue;
 
   sem_state_t state;
+
+  struct mutex *next_owned;
 } mutex_t;
 
 void mutex_init(mutex_t *m);

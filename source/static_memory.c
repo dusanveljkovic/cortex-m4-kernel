@@ -18,7 +18,8 @@ void task_memory_init(void) {
   for (int i = 0; i < N_TASKS; i++) {
     task_slots[i].state = TASK_UNUSED;
     task_slots[i].sp = 0;
-    task_slots[i].priority = 0;
+    task_slots[i].base_priority = 0;
+    task_slots[i].effective_priority = 0;
     task_slots[i].waiting_on = 0;
     task_slots[i].next = 0;
   }
