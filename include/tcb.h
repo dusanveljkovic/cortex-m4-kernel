@@ -32,6 +32,6 @@ typedef struct tcb {
 } tcb_t;
 
 tcb_t *create_task(uint8_t priority, void (*func)(void *), void *args);
-void task_recalculate_priority(tcb_t *task);
+uint8_t task_recalculate_priority(tcb_t *task);
 
 #endif // _TCB_H

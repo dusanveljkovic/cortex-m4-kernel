@@ -111,10 +111,15 @@ sem_result_t mutex_lock(mutex_t *m) {
 
   priority_queue_push(&m->wait_queue, task);
 
-  task_recalculate_priority(m->owner);
+  if (task->effective_priority < m->owner->effective_priority) {
+    m->owner->effective_priority = task->effective_priority;
+    if (m->owner->state == TASK_READY)
+      scheduler_reorder(m->owner);
+  }
 
   return SEM_OK_YIELD;
 }
+
 sem_result_t mutex_unlock(mutex_t *m) {
   if (m->owner != current_task) {
     return MUTEX_NOT_OWNER;
@@ -123,17 +128,17 @@ sem_result_t mutex_unlock(mutex_t *m) {
 
   m->owner = next;
   if (next != 0) {
-    next->waiting_on = 0;
     next->state = TASK_READY;
+    next->waiting_on = 0;
 
     mutex_queue_push(&next->owned_mutexes, m);
-    task_recalculate_priority(next);
+    next->effective_priority = task_recalculate_priority(next);
+    scheduler_put_task(next);
   }
   mutex_queue_remove(&current_task->owned_mutexes, m);
 
-  task_recalculate_priority(current_task);
-
-  scheduler_put_task(next);
+  uint8_t new_priority = task_recalculate_priority(current_task);
+  current_task->effective_priority = new_priority;
 
   return SEM_OK;
 }

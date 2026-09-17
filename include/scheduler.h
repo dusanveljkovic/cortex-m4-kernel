@@ -13,10 +13,12 @@ void queue_push(tcb_list_t *q, tcb_t *task);
 
 void priority_queue_push(tcb_list_t *q, tcb_t *task);
 tcb_t *priority_queue_pop(tcb_list_t *q);
+void priority_queue_reoder(tcb_list_t *t, tcb_t *task);
 
 void scheduler_init(void);
 void scheduler_select_next(void);
 void scheduler_put_task(tcb_t *task);
+void scheduler_reorder(tcb_t *task);
 
 extern volatile tcb_t *current_task;
 extern volatile tcb_t *next_task;

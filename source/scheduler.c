@@ -34,6 +34,10 @@ void scheduler_select_next(void) {
   next_task = current_task;
 }
 
+void scheduler_reorder(tcb_t *task) {
+  priority_queue_reoder(&ready_queue, task);
+}
+
 tcb_t *queue_pop(tcb_list_t *q) {
   tcb_t *ret = q->head;
   if (ret == 0)
@@ -98,4 +102,38 @@ tcb_t *priority_queue_pop(tcb_list_t *q) {
   task->next = 0;
 
   return task;
+}
+
+void priority_queue_remove(tcb_list_t *q, tcb_t *task) {
+  if (q->head == 0)
+    return;
+
+  if (q->head == task) {
+    q->head = task->next;
+    if (q->tail == task)
+      q->tail = 0;
+    task->next = 0;
+    return;
+  }
+
+  tcb_t *prev = q->head;
+  while (prev->next != 0) {
+    if (prev->next == task) {
+      prev->next = task->next;
+
+      if (q->tail == task)
+        q->tail = prev;
+
+      task->next = 0;
+
+      return;
+    }
+
+    prev = prev->next;
+  }
+}
+
+void priority_queue_reoder(tcb_list_t *t, tcb_t *task) {
+  priority_queue_remove(t, task);
+  priority_queue_push(t, task);
 }
