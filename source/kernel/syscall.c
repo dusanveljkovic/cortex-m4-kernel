@@ -1,10 +1,10 @@
-#include "../include/syscall.h"
-#include "../include/heap.h"
-#include "../include/scb.h"
-#include "../include/scheduler.h"
-#include "../include/semaphore.h"
-#include "../include/static_memory.h"
-#include "../include/tcb.h"
+#include "../../include/syscall.h"
+#include "../../include/heap.h"
+#include "../../include/scb.h"
+#include "../../include/scheduler.h"
+#include "../../include/semaphore.h"
+#include "../../include/static_memory.h"
+#include "../../include/tcb.h"
 #include "stdint.h"
 
 void *syscall(uint32_t number, void *arg2, void *arg3, void *arg4) {
@@ -67,7 +67,7 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
   }
   case SYS_SEM_CREATE: {
     uint32_t count = (uint32_t)arg2;
-    ret = (uint32_t *)alloc_semaphore();
+    ret = (uint32_t *)kmalloc(sizeof(semaphore_t));
     semaphore_init((semaphore_t *)ret, count);
     break;
   }
@@ -90,11 +90,12 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
   case SYS_SEM_CLOSE: {
     semaphore_t *sem = (semaphore_t *)arg2;
     semaphore_close(sem);
+    kfree(sem);
     break;
   }
 
   case SYS_MUTEX_CREATE: {
-    ret = (uint32_t *)alloc_mutex();
+    ret = (uint32_t *)kmalloc(sizeof(mutex_t));
     mutex_init((mutex_t *)ret);
     break;
   }
@@ -119,6 +120,7 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
     void (*func)(void *) = (void (*)(void *))arg3;
     void *args = arg4;
     ret = (uint32_t *)create_task(priority, func, args);
+    scheduler_put_task((tcb_t *)ret);
     break;
   }
   case SYS_TASK_EXIT:

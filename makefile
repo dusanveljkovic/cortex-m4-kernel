@@ -3,21 +3,22 @@ BUILD_DIR = build
 DEBUG_ENABLED = 1
 
 SOURCE_S_LIST = \
-source/startup_code.s \
-source/task_stack_init.s \
-source/pend_sv_handler.s \
-source/sv_call_handler.s 
+source/kernel/startup_code.s \
+source/kernel/task_stack_init.s \
+source/kernel/pend_sv_handler.s \
+source/kernel/sv_call_handler.s 
 
 SOURCE_C_LIST = \
-source/main.c \
-source/handlers.c \
-source/systick.c \
-source/scheduler.c \
-source/tcb.c \
-source/syscall.c \
-source/static_memory.c \
-source/semaphore.c \
-source/heap.c
+source/kernel/main.c \
+source/kernel/handlers.c \
+source/kernel/systick.c \
+source/kernel/scheduler.c \
+source/kernel/tcb.c \
+source/kernel/syscall.c \
+source/kernel/static_memory.c \
+source/kernel/semaphore.c \
+source/kernel/heap.c \
+source/user/user_main.c
 
 FLAGS_INCLUDE = \
 -Iinclude

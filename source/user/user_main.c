@@ -1,12 +1,5 @@
-#include "../include/heap.h"
-#include "../include/nvic.h"
-#include "../include/scb.h"
-#include "../include/scheduler.h"
-#include "../include/semaphore.h"
-#include "../include/static_memory.h"
-#include "../include/syscall.h"
-#include "../include/systick.h"
-#include <stdint.h>
+#include "../../include/semaphore.h"
+#include "../../include/syscall.h"
 
 static uint32_t data = 0;
 
@@ -56,9 +49,6 @@ void low_task(void *arg) {
   tcb_t *t1 = sys_task_create(1, high_task, arg);
   tcb_t *t2 = sys_task_create(2, med_task, arg);
   tcb_t *t3 = sys_task_create(2, med_task, arg);
-  scheduler_put_task(t1);
-  scheduler_put_task(t2);
-  scheduler_put_task(t3);
 
   wrapper_t w = *(wrapper_t *)arg;
   int g = 2;
@@ -89,39 +79,4 @@ void user_main(void *arg) {
   arg1 = (wrapper_t){1, sem1, sem2, m1};
   arg2 = (wrapper_t){1, sem1, sem2, m1};
   tcb_t *t3 = sys_task_create(3, low_task, parg1);
-  scheduler_put_task(t3);
-}
-
-extern uint8_t _heap_start;
-extern uint8_t _heap_end;
-uint32_t main() {
-  static_memory_init();
-  heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
-  scheduler_init();
-
-  SCB->SHPR2 = 0xE0000000;
-  SCB->SHPR3 = 0xE0F00000;
-  tcb_t *user_task = sys_task_create(0, user_main, 0);
-  scheduler_put_task(user_task);
-
-  // static tcb_t kernel;
-  //
-  // uint32_t *curr_sp;
-  // asm volatile("mov %0, sp" : "=r"(curr_sp));
-  // kernel.sp = task_stack_init(curr_sp, kernel_main);
-  // current_task = &kernel;
-  // asm volatile("msr psp, %0" ::"r"(kernel.sp));
-  // asm volatile("mrs r1, control\n"
-  //              "orr r1, r1, #2\n"
-  //              "msr control, r1\n"
-  //              "isb");
-
-  sys_yield();
-
-  // systick_init();
-
-  while (1) {
-  }
-
-  return 0;
 }

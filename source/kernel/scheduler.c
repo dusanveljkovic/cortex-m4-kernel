@@ -1,5 +1,5 @@
-#include "../include/scheduler.h"
-#include "../include/tcb.h"
+#include "../../include/scheduler.h"
+#include "../../include/tcb.h"
 
 static tcb_list_t ready_queue;
 

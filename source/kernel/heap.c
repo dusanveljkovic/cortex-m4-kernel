@@ -1,4 +1,4 @@
-#include "../include/heap.h"
+#include "../../include/heap.h"
 #include "stdint.h"
 
 #define HEAP_ALIGMENT 8

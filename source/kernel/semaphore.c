@@ -1,8 +1,9 @@
-#include "../include/semaphore.h"
-#include "../include/arm.h"
-#include "../include/scheduler.h"
+#include "../../include/semaphore.h"
+#include "../../include/arm.h"
+#include "../../include/scheduler.h"
 
 void semaphore_init(semaphore_t *sem, int count) {
+  sem->state = SEM_OPEN;
   sem->count = count;
   sem->wait_queue.head = 0;
   sem->wait_queue.tail = 0;
@@ -60,11 +61,13 @@ void semaphore_close(semaphore_t *sem) {
   while (task) {
     scheduler_put_task(task);
     task = queue_pop(&sem->wait_queue);
+    task->waiting_on = 0;
   }
   sem->state = SEM_CLOSED;
 }
 
 void mutex_init(mutex_t *m) {
+  m->state = SEM_OPEN;
   m->owner = 0;
   m->wait_queue.head = 0;
   m->wait_queue.tail = 0;

@@ -1,7 +1,7 @@
-#include "../include/tcb.h"
-#include "../include/scheduler.h"
-#include "../include/static_memory.h"
-#include "../include/syscall.h"
+#include "../../include/tcb.h"
+#include "../../include/scheduler.h"
+#include "../../include/static_memory.h"
+#include "../../include/syscall.h"
 
 #define N_TASKS 2
 
