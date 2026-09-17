@@ -1,3 +1,4 @@
+#include "../include/heap.h"
 #include "../include/nvic.h"
 #include "../include/scb.h"
 #include "../include/scheduler.h"
@@ -52,9 +53,9 @@ void med_task(void *arg) {
 }
 
 void low_task(void *arg) {
-  tcb_t *t1 = sys_task_create(1, high_task, &arg1);
-  tcb_t *t2 = sys_task_create(2, med_task, &arg2);
-  tcb_t *t3 = sys_task_create(2, med_task, &arg2);
+  tcb_t *t1 = sys_task_create(1, high_task, arg);
+  tcb_t *t2 = sys_task_create(2, med_task, arg);
+  tcb_t *t3 = sys_task_create(2, med_task, arg);
   scheduler_put_task(t1);
   scheduler_put_task(t2);
   scheduler_put_task(t3);
@@ -80,14 +81,22 @@ void user_main(void *arg) {
   semaphore_t *sem1 = sys_sem_create(0);
   semaphore_t *sem2 = sys_sem_create(0);
   mutex_t *m1 = sys_mutex_create();
+  wrapper_t *parg1 = sys_malloc(sizeof(wrapper_t));
+  parg1->number = 1;
+  parg1->sem1 = sem1;
+  parg1->sem2 = sem2;
+  parg1->m = m1;
   arg1 = (wrapper_t){1, sem1, sem2, m1};
   arg2 = (wrapper_t){1, sem1, sem2, m1};
-  tcb_t *t3 = sys_task_create(3, low_task, &arg2);
+  tcb_t *t3 = sys_task_create(3, low_task, parg1);
   scheduler_put_task(t3);
 }
 
+extern uint8_t _heap_start;
+extern uint8_t _heap_end;
 uint32_t main() {
   static_memory_init();
+  heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
   scheduler_init();
 
   SCB->SHPR2 = 0xE0000000;

@@ -8,6 +8,10 @@
 enum {
   SYS_YIELD = 0,
 
+  SYS_MALLOC,
+  SYS_CALLOC,
+  SYS_FREE,
+
   SYS_SEM_CREATE,
   SYS_SEM_WAIT,
   SYS_SEM_POST,
@@ -22,6 +26,10 @@ enum {
 };
 
 void sys_yield(void);
+
+void *sys_malloc(uint32_t size);
+void *sys_calloc(uint32_t count, uint32_t size);
+void sys_free(void *ptr);
 
 semaphore_t *sys_sem_create(uint32_t count);
 void sys_sem_wait(semaphore_t *sem);

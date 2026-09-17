@@ -1,4 +1,5 @@
 #include "../include/syscall.h"
+#include "../include/heap.h"
 #include "../include/scb.h"
 #include "../include/scheduler.h"
 #include "../include/semaphore.h"
@@ -13,6 +14,14 @@ void *syscall(uint32_t number, void *arg2, void *arg3, void *arg4) {
 }
 
 inline void sys_yield(void) { syscall(SYS_YIELD, 0, 0, 0); }
+
+inline void *sys_malloc(uint32_t size) {
+  return syscall(SYS_MALLOC, (void *)size, 0, 0);
+}
+inline void *sys_calloc(uint32_t count, uint32_t size) {
+  return syscall(SYS_CALLOC, (void *)count, (void *)size, 0);
+}
+inline void sys_free(void *ptr) { syscall(SYS_FREE, ptr, 0, 0); }
 
 inline tcb_t *sys_task_create(uint8_t priority, void (*func)(void *),
                               void *args) {
@@ -44,6 +53,18 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
   case SYS_YIELD:
     should_yield = 1;
     break;
+  case SYS_MALLOC: {
+    ret = kmalloc((uint32_t)arg2);
+    break;
+  }
+  case SYS_CALLOC: {
+    ret = kcalloc((uint32_t)arg2, (uint32_t)arg3);
+    break;
+  }
+  case SYS_FREE: {
+    kfree(arg2);
+    break;
+  }
   case SYS_SEM_CREATE: {
     uint32_t count = (uint32_t)arg2;
     ret = (uint32_t *)alloc_semaphore();
