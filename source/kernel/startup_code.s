@@ -40,6 +40,9 @@
 .weak irq3_RTC
 .thumb_set irq3_RTC, default_handler
 
+.weak usart2_handler
+.thumb_set usart2_handler, default_handler
+
 .section .vector_table, "a"
 .word _main_stack_pointer_value
 .word reset_handler
@@ -61,7 +64,11 @@
 .word irq1_PVD
 .word irq2_TAMPER
 .word irq3_RTC
-.rept 64
+.rept 34
+  .word default_handler 
+.endr
+.word usart2_handler
+.rept 56
   .word default_handler
 .endr
 

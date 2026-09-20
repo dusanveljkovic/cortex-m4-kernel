@@ -2,6 +2,7 @@
 #define _SYSCALL_H
 
 #include "semaphore.h"
+#include "stdbool.h"
 #include "stdint.h"
 #include "tcb.h"
 
@@ -23,6 +24,9 @@ enum {
 
   SYS_TASK_CREATE,
   SYS_TASK_EXIT,
+
+  SYS_PUTC,
+  SYS_GETC,
 };
 
 void sys_yield(void);
@@ -43,6 +47,10 @@ void sys_mutex_close(mutex_t *m);
 
 tcb_t *sys_task_create(uint8_t priority, void (*func)(void *), void *args);
 void sys_task_exit(void);
+
+void sys_putc(char c);
+bool sys_getc(char *c);
+
 void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
                   uint32_t *arg4);
 

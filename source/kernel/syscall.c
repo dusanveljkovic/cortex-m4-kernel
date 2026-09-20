@@ -5,6 +5,7 @@
 #include "../../include/semaphore.h"
 #include "../../include/static_memory.h"
 #include "../../include/tcb.h"
+#include "../../include/usart.h"
 #include "stdint.h"
 
 void *syscall(uint32_t number, void *arg2, void *arg3, void *arg4) {
@@ -42,6 +43,9 @@ inline void sys_mutex_lock(mutex_t *m) { syscall(SYS_MUTEX_LOCK, m, 0, 0); }
 inline void sys_mutex_unlock(mutex_t *m) { syscall(SYS_MUTEX_UNLOCK, m, 0, 0); }
 
 inline void sys_task_exit(void) { syscall(SYS_TASK_EXIT, 0, 0, 0); }
+
+inline void sys_putc(char c) { syscall(SYS_PUTC, (void *)c, 0, 0); }
+inline bool sys_getc(char *c) { syscall(SYS_GETC, c, 0, 0); }
 
 void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
                   uint32_t *arg4) {
@@ -128,6 +132,15 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
     current_task->state = TASK_FINISHED;
     should_yield = 1;
     break;
+
+  case SYS_PUTC: {
+    usart2_putc((char)arg2);
+    break;
+  }
+  case SYS_GETC: {
+    ret = (uint32_t *)usart2_getc((char *)arg2);
+    break;
+  }
   }
 
   if (should_yield == 1) {

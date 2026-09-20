@@ -17,7 +17,15 @@ typedef struct {
   uint8_t IPR[240];
 } NVIC_RegisterMapType;
 
+#define USART2_IRQ 38
+
 #define NVIC ((NVIC_RegisterMapType *)0xE000E100)
+
+#define NVIC_ENABLE_IRQ(irq_number)                                            \
+  NVIC->ISER[irq_number / 32] |= (1 << (irq_number % 32))
+
+#define NVIC_SET_PRIORITY(irq_number, priority)                                \
+  NVIC->IPR[irq_number] = priority;
 
 #define SVCALL_IRQ 11
 #define PENDSV_IRQ 14
