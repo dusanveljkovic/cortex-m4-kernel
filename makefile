@@ -18,6 +18,8 @@ source/kernel/syscall.c \
 source/kernel/static_memory.c \
 source/kernel/semaphore.c \
 source/kernel/heap.c \
+source/kernel/clock.c \
+source/kernel/usart.c \
 source/user/user_main.c
 
 FLAGS_INCLUDE = \

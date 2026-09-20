@@ -59,9 +59,9 @@ sem_result_t semaphore_post(semaphore_t *sem) {
 void semaphore_close(semaphore_t *sem) {
   tcb_t *task = queue_pop(&sem->wait_queue);
   while (task) {
+    task->waiting_on = 0;
     scheduler_put_task(task);
     task = queue_pop(&sem->wait_queue);
-    task->waiting_on = 0;
   }
   sem->state = SEM_CLOSED;
 }
@@ -142,6 +142,9 @@ sem_result_t mutex_unlock(mutex_t *m) {
 
   uint8_t new_priority = task_recalculate_priority(current_task);
   current_task->effective_priority = new_priority;
+
+  if (next->effective_priority < current_task->effective_priority)
+    return SEM_OK_YIELD;
 
   return SEM_OK;
 }

@@ -120,7 +120,8 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
     void (*func)(void *) = (void (*)(void *))arg3;
     void *args = arg4;
     ret = (uint32_t *)create_task(priority, func, args);
-    scheduler_put_task((tcb_t *)ret);
+    if (ret != 0)
+      scheduler_put_task((tcb_t *)ret);
     break;
   }
   case SYS_TASK_EXIT:

@@ -1,8 +1,10 @@
+#include "../../include/clock.h"
 #include "../../include/heap.h"
 #include "../../include/scb.h"
 #include "../../include/scheduler.h"
 #include "../../include/static_memory.h"
 #include "../../include/tcb.h"
+#include "../../include/usart.h"
 
 static uint32_t data = 0;
 
@@ -10,6 +12,13 @@ extern void user_main(void *);
 extern uint8_t _heap_start;
 extern uint8_t _heap_end;
 int main() {
+  clock_init();
+  usart2_init();
+
+  usart2_puts("HELLO\r\n");
+
+  usart2_test();
+
   static_memory_init();
   heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
   scheduler_init();

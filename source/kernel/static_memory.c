@@ -1,4 +1,3 @@
-#include "../../include/semaphore.h"
 #include "../../include/tcb.h"
 #include "stdint.h"
 
@@ -10,9 +9,6 @@
 
 static tcb_t task_slots[N_TASKS];
 static uint32_t task_stacks[N_TASKS][TASK_STACK_SIZE];
-
-static semaphore_t semaphore_slots[N_SEMAPHORES];
-static mutex_t mutex_slots[N_MUTEXES];
 
 void task_memory_init(void) {
   for (int i = 0; i < N_TASKS; i++) {
@@ -30,7 +26,7 @@ tcb_t *alloc_task(void) {
     if (task_slots[i].state == TASK_UNUSED ||
         task_slots[i].state == TASK_FINISHED) {
       task_slots[i].state = TASK_READY;
-      task_slots[i].stack_top = &task_stacks[i][127];
+      task_slots[i].stack_top = &task_stacks[i][TASK_STACK_SIZE - 1];
       return &task_slots[i];
     }
   }
