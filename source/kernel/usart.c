@@ -6,11 +6,11 @@
 
 #define RX_BUFFER_SIZE 16
 #define TX_BUFFER_SIZE 16
-static uint8_t rx_buffer[RX_BUFFER_SIZE];
+static uint8_t rx_buffer[RX_BUFFER_SIZE] = {0};
 static ring_buffer_t rx_ring_buffer = {
     .buffer = rx_buffer, .size = RX_BUFFER_SIZE, .head = 0, .tail = 0};
 
-static uint8_t tx_buffer[TX_BUFFER_SIZE];
+static uint8_t tx_buffer[TX_BUFFER_SIZE] = {0};
 static ring_buffer_t tx_ring_buffer = {
     .buffer = tx_buffer, .size = TX_BUFFER_SIZE, .head = 0, .tail = 0};
 

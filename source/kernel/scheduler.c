@@ -1,4 +1,5 @@
 #include "../../include/scheduler.h"
+#include "../../include/arm.h"
 #include "../../include/tcb.h"
 
 static tcb_list_t ready_queue;
@@ -18,9 +19,13 @@ void scheduler_init(void) {
 void scheduler_put_task(tcb_t *task) {
   if (task->state == TASK_FINISHED || task->state == TASK_BLOCKED)
     return;
-  task->state = TASK_READY;
 
+  uint32_t irq_state = irq_save();
+
+  task->state = TASK_READY;
   priority_queue_push(&ready_queue, task);
+
+  irq_restore(irq_state);
 }
 
 // select the next task to run and get rid of all
@@ -35,7 +40,9 @@ void scheduler_select_next(void) {
 }
 
 void scheduler_reorder(tcb_t *task) {
+  uint32_t irq_state = irq_save();
   priority_queue_reoder(&ready_queue, task);
+  irq_restore(irq_state);
 }
 
 tcb_t *queue_pop(tcb_list_t *q) {

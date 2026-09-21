@@ -57,6 +57,8 @@ sem_result_t semaphore_post(semaphore_t *sem) {
 }
 
 void semaphore_close(semaphore_t *sem) {
+  uint32_t irq_state = irq_save();
+
   tcb_t *task = queue_pop(&sem->wait_queue);
   while (task) {
     task->waiting_on = 0;
@@ -64,6 +66,8 @@ void semaphore_close(semaphore_t *sem) {
     task = queue_pop(&sem->wait_queue);
   }
   sem->state = SEM_CLOSED;
+
+  irq_restore(irq_state);
 }
 
 void mutex_init(mutex_t *m) {
@@ -99,13 +103,17 @@ static void mutex_queue_remove(mutex_t **head, mutex_t *m) {
 }
 
 sem_result_t mutex_lock(mutex_t *m) {
+  uint32_t irq_state = irq_save();
   if (m->owner == 0) {
     m->owner = current_task;
     mutex_queue_push(&current_task->owned_mutexes, m);
+    irq_restore(irq_state);
     return SEM_OK;
   }
-  if (m->owner == current_task)
+  if (m->owner == current_task) {
+    irq_restore(irq_state);
     return MUTEX_DEADLOCK;
+  }
 
   tcb_t *task = current_task;
 
@@ -120,11 +128,14 @@ sem_result_t mutex_lock(mutex_t *m) {
       scheduler_reorder(m->owner);
   }
 
+  irq_restore(irq_state);
   return SEM_OK_YIELD;
 }
 
 sem_result_t mutex_unlock(mutex_t *m) {
+  uint32_t irq_state = irq_save();
   if (m->owner != current_task) {
+    irq_restore(irq_state);
     return MUTEX_NOT_OWNER;
   }
   tcb_t *next = priority_queue_pop(&m->wait_queue);
@@ -143,8 +154,11 @@ sem_result_t mutex_unlock(mutex_t *m) {
   uint8_t new_priority = task_recalculate_priority(current_task);
   current_task->effective_priority = new_priority;
 
-  if (next->effective_priority < current_task->effective_priority)
+  if (next->effective_priority < current_task->effective_priority) {
     return SEM_OK_YIELD;
+    irq_restore(irq_state);
+  }
 
+  irq_restore(irq_state);
   return SEM_OK;
 }

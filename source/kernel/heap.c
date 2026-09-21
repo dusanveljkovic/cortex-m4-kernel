@@ -1,4 +1,5 @@
 #include "../../include/heap.h"
+#include "../../include/arm.h"
 #include "stdint.h"
 
 #define HEAP_ALIGMENT 8
@@ -28,6 +29,8 @@ void *kmalloc(uint32_t size) {
 
   size = align(size);
 
+  uint32_t irq_state = irq_save();
+
   heap_block_t *tmp = heap_head;
   while (tmp != 0) {
     if (tmp->free && tmp->size >= size) {
@@ -46,11 +49,13 @@ void *kmalloc(uint32_t size) {
       }
 
       tmp->free = 0;
+      irq_restore(irq_state);
       return (void *)(tmp + 1);
     }
     tmp = tmp->next;
   }
 
+  irq_restore(irq_state);
   return 0;
 }
 
@@ -72,6 +77,8 @@ void kfree(void *ptr) {
   if (ptr == 0)
     return;
 
+  uint32_t irq_state = irq_save();
+
   heap_block_t *block = (heap_block_t *)ptr - 1;
 
   block->free = 1;
@@ -92,4 +99,6 @@ void kfree(void *ptr) {
     prev->next = block->next;
     prev->next->prev = prev;
   }
+
+  irq_restore(irq_state);
 }
