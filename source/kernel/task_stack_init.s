@@ -2,6 +2,7 @@
 .syntax unified
 .thumb
 
+.extern task_wrapper
 .section .text.task_stack_init
 .type task_stack_init, %function
 .global task_stack_init
@@ -11,7 +12,8 @@ task_stack_init:
   mov r5, #0x0000
   movt r5, #0x0100
   push {r5} // xPSR: push xPSR with thumb bit 1
-  push {r1} // PC: return function pointer
+  ldr r5, =task_wrapper
+  push {r5} // PC: go to task_wrapper
   mov r5, #0xFFFD
   movt r5, #0xFFFF
   push {r5} // LR: (thread mode, PSP, no FPU)
@@ -21,10 +23,10 @@ task_stack_init:
   push {r5} // R3
   mov r5, #0x02020202
   push {r5} // R2
-  mov r5, #0x01010101
-  push {r5} // R1
-  mov r5, #0x00000000
-  push {r5} // R0
+  mov r5, r2
+  push {r5} // R1: args of function to call
+  mov r5, r1
+  push {r5} // R0: function to call
 
   mov r5, #0x11111111
   push {r5} // R11

@@ -15,7 +15,7 @@ typedef struct {
   uint32_t CFSR;
   uint32_t HFSR;
   uint32_t dummy0[1];
-  uint32_t MMAR;
+  uint32_t MMFAR;
   uint32_t BFAR;
 
 } SCB_RegisterMapType;
@@ -24,6 +24,7 @@ typedef struct {
 
 #define SBC_CCR_DIV_0 (1 << 4)
 #define SCB_SHCSR_USG_FAULT_ENABLE (1 << 18)
+#define SCB_SHCSR_MEMFAULTENABLE (1 << 16)
 #define ICSR_PENDSV_SET (1 << 28)
 
 #define SYSTICK_SHPR 3

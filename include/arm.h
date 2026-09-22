@@ -18,4 +18,9 @@ static inline void irq_restore(uint32_t primask) {
   asm volatile("msr primask, %0" : : "r"(primask) : "memory");
 }
 
+#define __DSB() asm volatile("dsb");
+#define __ISB() asm volatile("isb");
+#define __SET_CONTROL(control)                                                 \
+  asm volatile("msr control, %0" : : "r"(control) : "memory");
+
 #endif // !_ARM_H

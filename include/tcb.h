@@ -19,12 +19,14 @@ typedef struct tcb {
   uint8_t base_priority;
   uint8_t effective_priority;
 
-  uint32_t *stack_top;
+  uint8_t *stack_base;
   uint32_t stack_size;
   struct tcb *next;
   const char *name;
   void (*function)(void *);
   void *args;
+
+  uint8_t unprivileged;
 
   void *waiting_on;
 

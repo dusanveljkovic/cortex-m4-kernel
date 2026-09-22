@@ -1,7 +1,7 @@
+#include "../../include/mpu.h"
 #include "../../include/semaphore.h"
 #include "../../include/syscall.h"
-
-static uint32_t data = 0;
+#include <stdint.h>
 
 typedef struct {
   int number;
@@ -9,9 +9,6 @@ typedef struct {
   semaphore_t *sem2;
   mutex_t *m;
 } wrapper_t;
-
-static wrapper_t arg1;
-static wrapper_t arg2;
 
 void print(const char *str) {
   while (*str) {
@@ -84,7 +81,7 @@ void low_task(void *arg) {
 }
 
 void user_main(void *arg) {
-  data = 0;
+  print("[user] in user main\r\n");
   semaphore_t *sem1 = sys_sem_create(0);
   semaphore_t *sem2 = sys_sem_create(0);
   mutex_t *m1 = sys_mutex_create();
@@ -93,8 +90,10 @@ void user_main(void *arg) {
   parg1->sem1 = sem1;
   parg1->sem2 = sem2;
   parg1->m = m1;
-  arg1 = (wrapper_t){1, sem1, sem2, m1};
-  arg2 = (wrapper_t){1, sem1, sem2, m1};
   tcb_t *t3 = sys_task_create(1, low_task, parg1);
   print("created all 3 tasks\r\n");
+  // *((uint32_t *)0x20001000) = 1;
+  // *((uint32_t *)0x20001004) = 1;
+  // *((uint32_t *)0x20001008) = 1;
+  // *((uint32_t *)0x2000100C) = 1;
 }

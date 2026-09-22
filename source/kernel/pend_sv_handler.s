@@ -3,6 +3,8 @@
 .thumb
 
 .extern scheduler_select_next
+.extern mpu_switch_to_task
+.extern task_set_privilege
 .extern current_task
 .extern next_task
 
@@ -35,8 +37,18 @@ restore_task:
   ldr r1, =next_task
   ldr r2, [r1]
   str r2, [r0]
-  ldr r0, [r2]
 
+  mov r0, r2
+  push {r2}
+  bl mpu_switch_to_task
+  pop {r2}
+
+  mov r0, r2
+  push {r2}
+  bl task_set_privilege
+  pop {r2}
+
+  ldr r0, [r2]
   ldmia r0!, {r4-r11}
 
   msr psp, r0

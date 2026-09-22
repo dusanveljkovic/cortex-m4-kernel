@@ -51,10 +51,24 @@ SECTIONS
     *(COMMON)
   } > SRAM 
 
-  . = ALIGN(8);
+  /* HEAP
+   * MPU region: 
+   * base = 0x20010000
+   * size = 64KiB
+   * end = 0x20020000
+   */
 
-  _heap_start = .;
-  _heap_end = _main_stack_pointer_value - 0x1000;
+  . = 0x2001000;
+  .heap (NOLOAD) :
+  {
+    . = ALIGN(64K);
+
+    _heap_start = .;
+
+    . += 64K;
+
+    _heap_end = .;
+  } > SRAM
 
   _end = .;
 }

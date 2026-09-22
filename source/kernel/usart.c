@@ -66,6 +66,11 @@ void usart2_init(void) {
   USART2->CR1 |= USART_ENABLE;
 
   NVIC_ENABLE_IRQ(USART2_IRQ);
+
+  for (int i = 0; i < TX_BUFFER_SIZE; i++)
+    tx_buffer[i] = 0;
+  for (int i = 0; i < RX_BUFFER_SIZE; i++)
+    rx_buffer[i] = 0;
 }
 
 // blocks while there is no space in tx_ring_buffer
@@ -90,4 +95,23 @@ bool usart2_getc(char *c) {
   *c = ring_buffer_get(&rx_ring_buffer);
 
   return true;
+}
+
+void usart2_putc_poll(char c) {
+  while (!(USART2->SR & USART_SR_TXE))
+    ;
+
+  USART2->DR = (uint8_t)c;
+}
+
+void usart2_fault_puts(const char *s) {
+  while (*s)
+    usart2_putc_poll(*s++);
+}
+
+void usart2_fault_puthex(uint32_t value) {
+  static const char hex[] = "0123456789abcdef";
+
+  for (int i = 7; i >= 0; i--)
+    usart2_putc_poll(hex[(value >> (i * 4)) & 0xf]);
 }
