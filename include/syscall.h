@@ -51,7 +51,7 @@ void sys_task_exit(void);
 void sys_putc(char c);
 bool sys_getc(char *c);
 
-void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
-                  uint32_t *arg4);
+void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+                  uintptr_t arg4);
 
 #endif // !_SYSCALL_H

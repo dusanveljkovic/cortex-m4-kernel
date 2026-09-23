@@ -7,8 +7,9 @@
 #include "../../include/tcb.h"
 #include "../../include/usart.h"
 #include "stdint.h"
+#include <stdint.h>
 
-void *syscall(uint32_t number, void *arg2, void *arg3, void *arg4) {
+void *syscall(uint32_t number, uintptr_t arg2, uintptr_t arg3, uintptr_t arg4) {
   register uint32_t r0 asm("r0") = number;
   asm volatile("svc #0" ::"r"(r0) : "memory");
   return (void *)r0;
@@ -17,39 +18,48 @@ void *syscall(uint32_t number, void *arg2, void *arg3, void *arg4) {
 inline void sys_yield(void) { syscall(SYS_YIELD, 0, 0, 0); }
 
 inline void *sys_malloc(uint32_t size) {
-  return syscall(SYS_MALLOC, (void *)size, 0, 0);
+  return syscall(SYS_MALLOC, (uintptr_t)size, 0, 0);
 }
 inline void *sys_calloc(uint32_t count, uint32_t size) {
-  return syscall(SYS_CALLOC, (void *)count, (void *)size, 0);
+  return syscall(SYS_CALLOC, (uintptr_t)count, (uintptr_t)size, 0);
 }
-inline void sys_free(void *ptr) { syscall(SYS_FREE, ptr, 0, 0); }
+inline void sys_free(void *ptr) { syscall(SYS_FREE, (uintptr_t)ptr, 0, 0); }
 
 inline tcb_t *sys_task_create(uint8_t priority, void (*func)(void *),
                               void *args) {
-  return (tcb_t *)syscall(SYS_TASK_CREATE, (void *)priority, func, args);
+  return (tcb_t *)syscall(SYS_TASK_CREATE, (uintptr_t)priority, (uintptr_t)func,
+                          (uintptr_t)args);
 }
 
 inline semaphore_t *sys_sem_create(uint32_t count) {
-  return (semaphore_t *)syscall(SYS_SEM_CREATE, (void *)count, 0, 0);
+  return (semaphore_t *)syscall(SYS_SEM_CREATE, (uintptr_t)count, 0, 0);
 }
 
-inline void sys_sem_wait(semaphore_t *sem) { syscall(SYS_SEM_WAIT, sem, 0, 0); }
-inline void sys_sem_post(semaphore_t *sem) { syscall(SYS_SEM_POST, sem, 0, 0); }
+inline void sys_sem_wait(semaphore_t *sem) {
+  syscall(SYS_SEM_WAIT, (uintptr_t)sem, 0, 0);
+}
+inline void sys_sem_post(semaphore_t *sem) {
+  syscall(SYS_SEM_POST, (uintptr_t)sem, 0, 0);
+}
 
 inline mutex_t *sys_mutex_create() {
   return (mutex_t *)syscall(SYS_MUTEX_CREATE, 0, 0, 0);
 }
-inline void sys_mutex_lock(mutex_t *m) { syscall(SYS_MUTEX_LOCK, m, 0, 0); }
-inline void sys_mutex_unlock(mutex_t *m) { syscall(SYS_MUTEX_UNLOCK, m, 0, 0); }
+inline void sys_mutex_lock(mutex_t *m) {
+  syscall(SYS_MUTEX_LOCK, (uintptr_t)m, 0, 0);
+}
+inline void sys_mutex_unlock(mutex_t *m) {
+  syscall(SYS_MUTEX_UNLOCK, (uintptr_t)m, 0, 0);
+}
 
 inline void sys_task_exit(void) { syscall(SYS_TASK_EXIT, 0, 0, 0); }
 
-inline void sys_putc(char c) { syscall(SYS_PUTC, (void *)c, 0, 0); }
-inline bool sys_getc(char *c) { syscall(SYS_GETC, c, 0, 0); }
+inline void sys_putc(char c) { syscall(SYS_PUTC, (uintptr_t)c, 0, 0); }
+inline bool sys_getc(char *c) { syscall(SYS_GETC, (uintptr_t)c, 0, 0); }
 
-void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
-                  uint32_t *arg4) {
-  uint32_t syscall_number = *arg1;
+void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+                  uintptr_t arg4) {
+  uint32_t syscall_number = *(uint32_t *)arg1;
   uint8_t should_yield = 0;
   uint32_t *ret = 0;
 
@@ -66,7 +76,7 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
     break;
   }
   case SYS_FREE: {
-    kfree(arg2);
+    kfree((void *)arg2);
     break;
   }
   case SYS_SEM_CREATE: {
@@ -122,7 +132,7 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
   case SYS_TASK_CREATE: {
     uint8_t priority = (uint8_t)arg2;
     void (*func)(void *) = (void (*)(void *))arg3;
-    void *args = arg4;
+    void *args = (void *)arg4;
     ret = (uint32_t *)create_task(priority, func, args);
     if (ret != 0)
       scheduler_put_task((tcb_t *)ret);
@@ -150,7 +160,7 @@ void svc_dispatch(uint32_t *arg1, uint32_t *arg2, uint32_t *arg3,
     asm volatile("isb");
   }
 
-  *arg1 = (uint32_t)ret;
+  *(uint32_t *)arg1 = (uint32_t)ret;
 
   return;
 }

@@ -6,11 +6,21 @@
 void mpu_init(void) {
   MPU->CTRL = 0;
 
+  /* Flash region
+   *  start: 0x08000000
+   *  size: 512KB
+   *  privilege: RO/RO
+   */
   MPU->RNR = MPU_REGION_FLASH;
   MPU->RBAR = 0x08000000;
   MPU->RASR = (MPU_AP_RO_RO << MPU_RASR_AP_Pos) | (18 << MPU_RASR_SIZE_Pos) |
               (1 << MPU_RASR_ENABLE_Pos);
 
+  /* Heap region
+   *  start: 0x20010000
+   *  size: 64KB
+   *  privilege: RW/RW
+   */
   MPU->RNR = MPU_REGION_HEAP;
   MPU->RBAR = 0x20010000;
   MPU->RASR = (MPU_AP_RW_RW << MPU_RASR_AP_Pos) | (15 << MPU_RASR_SIZE_Pos) |
