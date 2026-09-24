@@ -9,6 +9,7 @@ typedef enum {
   TASK_RUNNING,
   TASK_BLOCKED,
   TASK_SUSPENDED,
+  TASK_SLEEPING,
   TASK_FINISHED
 } task_state_t;
 
@@ -27,6 +28,7 @@ typedef struct tcb {
   void *args;
 
   uint8_t unprivileged;
+  uint32_t wake_tick;
 
   void *waiting_on;
 

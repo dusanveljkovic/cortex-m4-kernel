@@ -22,6 +22,7 @@ source/kernel/clock.c \
 source/kernel/usart.c \
 source/kernel/ring_buffer.c \
 source/kernel/mpu.c \
+source/kernel/sleep.c \
 source/user/user_main.c
 
 FLAGS_INCLUDE = \

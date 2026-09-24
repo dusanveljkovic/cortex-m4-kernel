@@ -1,7 +1,7 @@
 #include "../../include/systick.h"
 #include "../../include/scb.h"
 #include "../../include/scheduler.h"
-#include <stdint.h>
+#include "../../include/sleep.h"
 
 volatile uint32_t system_ticks;
 
@@ -14,6 +14,7 @@ void systick_init() {
 
 void systick_handler(void) {
   system_ticks++;
+  sleep_tick();
 
   scheduler_put_task(current_task);
   SCB->ICSR |= ICSR_PENDSV_SET;

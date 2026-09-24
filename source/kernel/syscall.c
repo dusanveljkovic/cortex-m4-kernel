@@ -3,6 +3,7 @@
 #include "../../include/scb.h"
 #include "../../include/scheduler.h"
 #include "../../include/semaphore.h"
+#include "../../include/sleep.h"
 #include "../../include/static_memory.h"
 #include "../../include/tcb.h"
 #include "../../include/usart.h"
@@ -53,6 +54,8 @@ inline void sys_mutex_unlock(mutex_t *m) {
 }
 
 inline void sys_task_exit(void) { syscall(SYS_TASK_EXIT, 0, 0, 0); }
+
+inline void sys_sleep(uint32_t ticks) { syscall(SYS_SLEEP, ticks, 0, 0); }
 
 inline void sys_putc(char c) { syscall(SYS_PUTC, (uintptr_t)c, 0, 0); }
 inline bool sys_getc(char *c) { syscall(SYS_GETC, (uintptr_t)c, 0, 0); }
@@ -140,6 +143,10 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
   }
   case SYS_TASK_EXIT:
     current_task->state = TASK_FINISHED;
+    should_yield = 1;
+    break;
+  case SYS_SLEEP:
+    sleep_for_ticks((uint32_t)arg2);
     should_yield = 1;
     break;
 

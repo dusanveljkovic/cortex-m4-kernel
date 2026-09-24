@@ -5,12 +5,12 @@
 #define N_TASKS 8
 #define TASK_STACK_SIZE 1024
 
-static tcb_t task_slots[N_TASKS];
+static tcb_t task_slots[N_TASKS + 1];
 __attribute__((aligned(
-    TASK_STACK_SIZE))) static uint8_t task_stacks[N_TASKS][TASK_STACK_SIZE];
+    TASK_STACK_SIZE))) static uint8_t task_stacks[N_TASKS + 1][TASK_STACK_SIZE];
 
 void task_memory_init(void) {
-  for (int i = 0; i < N_TASKS; i++) {
+  for (int i = 0; i < N_TASKS + 1; i++) {
     task_slots[i].state = TASK_UNUSED;
     task_slots[i].sp = 0;
     task_slots[i].base_priority = 0;

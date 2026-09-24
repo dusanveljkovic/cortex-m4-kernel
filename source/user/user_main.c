@@ -21,6 +21,7 @@ void high_task(void *arg) {
   int g = 2;
   int runs = 10;
   while (1) {
+    sys_sleep(1000);
     // sys_mutex_lock(w.m);
     // print("high task mutex lock\r\n");
     // data += w.number;
@@ -42,6 +43,7 @@ void med_task(void *arg) {
   int g = 2;
   int runs = 10;
   while (1) {
+    sys_sleep(1000);
     // print("medium task processing\r\n");
     // data -= w.number;
     // g -= 1;
@@ -64,6 +66,7 @@ void low_task(void *arg) {
   int g = 2;
   int runs = 10;
   while (1) {
+    sys_sleep(1000);
     // sys_mutex_lock(w.m);
     // print("low task mutex lock\r\n");
     // data -= w.number;

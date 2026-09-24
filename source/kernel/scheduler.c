@@ -17,7 +17,10 @@ void scheduler_init(void) {
 // put task in respective queue based on its priority
 // skip finished or blocked task
 void scheduler_put_task(tcb_t *task) {
-  if (task->state == TASK_FINISHED || task->state == TASK_BLOCKED)
+  if (task == 0)
+    return;
+  if (task->state == TASK_FINISHED || task->state == TASK_BLOCKED ||
+      task->state == TASK_SLEEPING)
     return;
 
   uint32_t irq_state = irq_save();
@@ -33,6 +36,7 @@ void scheduler_put_task(tcb_t *task) {
 void scheduler_select_next(void) {
   if (ready_queue.head != 0) {
     next_task = priority_queue_pop(&ready_queue);
+    next_task->state = TASK_RUNNING;
     return;
   }
 

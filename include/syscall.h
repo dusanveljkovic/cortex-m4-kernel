@@ -25,6 +25,8 @@ enum {
   SYS_TASK_CREATE,
   SYS_TASK_EXIT,
 
+  SYS_SLEEP,
+
   SYS_PUTC,
   SYS_GETC,
 };
@@ -47,6 +49,8 @@ void sys_mutex_close(mutex_t *m);
 
 tcb_t *sys_task_create(uint8_t priority, void (*func)(void *), void *args);
 void sys_task_exit(void);
+
+void sys_sleep(uint32_t ticks);
 
 void sys_putc(char c);
 bool sys_getc(char *c);

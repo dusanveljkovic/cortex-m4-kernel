@@ -44,11 +44,18 @@ SECTIONS
 
   _lma_data_start = LOADADDR(.data);
 
-  .bss : 
+  .bss(NOLOAD) : 
   {
+    . = ALIGN(4);
+
+    _bss_start = .;
+
     *(.bss)
     *(.bss*)
     *(COMMON)
+
+    . = ALIGN(4);
+    _bss_end = .;
   } > SRAM 
 
   /* HEAP
@@ -58,7 +65,7 @@ SECTIONS
    * end = 0x20020000
    */
 
-  . = 0x2001000;
+  . = 0x20010000;
   .heap (NOLOAD) :
   {
     . = ALIGN(64K);

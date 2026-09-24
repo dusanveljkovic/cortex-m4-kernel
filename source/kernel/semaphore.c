@@ -154,7 +154,8 @@ sem_result_t mutex_unlock(mutex_t *m) {
   uint8_t new_priority = task_recalculate_priority(current_task);
   current_task->effective_priority = new_priority;
 
-  if (next->effective_priority < current_task->effective_priority) {
+  if (next != 0 &&
+      next->effective_priority < current_task->effective_priority) {
     return SEM_OK_YIELD;
     irq_restore(irq_state);
   }

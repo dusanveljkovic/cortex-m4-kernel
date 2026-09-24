@@ -14,6 +14,11 @@ static uint32_t data = 0;
 extern void user_main(void *);
 extern uint8_t _heap_start;
 extern uint8_t _heap_end;
+
+void idle_func(void *a) {
+  while (1)
+    ;
+}
 int main() {
   clock_init();
   usart2_init();
@@ -23,15 +28,17 @@ int main() {
   scheduler_init();
   mpu_init();
 
-  NVIC_SET_PRIORITY(USART2_IRQ, 0xD0);
+  NVIC_SET_PRIORITY(USART2_IRQ, 0xC0);
+  SCB_SET_PRIORITY(SVCALL_SHPR, SVCALL_PRIORITY_POS, 0xD0);
   SCB_SET_PRIORITY(SYSTICK_SHPR, SYSTICK_PRIORITY_POS, 0xE0);
   SCB_SET_PRIORITY(PENDSV_SHPR, PENDSV_PRIORITY_POS, 0xF0);
-  SCB_SET_PRIORITY(SVCALL_SHPR, SVCALL_PRIORITY_POS, 0xF0);
 
   usart2_fault_puts("[boot] successfull\r\n");
 
   tcb_t *user_task = create_task(0, user_main, 0);
+  tcb_t *idle_task = create_task(0xFF, idle_func, 0);
   scheduler_put_task(user_task);
+  scheduler_put_task(idle_task);
 
   systick_init();
 
