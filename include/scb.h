@@ -39,4 +39,15 @@ typedef struct {
   SCB->SHPR[shpr - 1] &= ~(0xFF << pos);                                       \
   SCB->SHPR[shpr - 1] |= (priority << pos);
 
+#define SCB_CFSR_IACCVIOL_Pos 0
+#define SCB_CFSR_IACCVIOL_Msk (1 << SCB_CFSR_IACCVIOL_Pos)
+#define SCB_CFSR_DACCVIOL_Pos 1
+#define SCB_CFSR_DACCVIOL_Msk (1 << SCB_CFSR_DACCVIOL_Pos)
+#define SCB_CFSR_MUNSTKERR_Pos 3
+#define SCB_CFSR_MUNSTKERR_Msk (1 << SCB_CFSR_MUNSTKERR_Pos)
+#define SCB_CFSR_MSTKERR_Pos 4
+#define SCB_CFSR_MSTKERR_Msk (1 << SCB_CFSR_MSTKERR_Pos)
+#define SCB_CFSR_MMARVALID_Pos 7
+#define SCB_CFSR_MMARVALID_Msk (1 < SCB_CFSR_MMARVALID_Pos)
+
 #endif // !_SCB_H

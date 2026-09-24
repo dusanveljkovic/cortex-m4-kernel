@@ -6,11 +6,12 @@ SOURCE_S_LIST = \
 source/kernel/startup_code.s \
 source/kernel/task_stack_init.s \
 source/kernel/pend_sv_handler.s \
+source/kernel/handlers.s \
 source/kernel/sv_call_handler.s 
 
 SOURCE_C_LIST = \
 source/kernel/main.c \
-source/kernel/handlers.c \
+source/kernel/debug_handlers.c \
 source/kernel/systick.c \
 source/kernel/scheduler.c \
 source/kernel/tcb.c \

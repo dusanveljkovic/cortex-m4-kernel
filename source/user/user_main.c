@@ -84,19 +84,21 @@ void low_task(void *arg) {
 }
 
 void user_main(void *arg) {
-  print("[user] in user main\r\n");
-  semaphore_t *sem1 = sys_sem_create(0);
-  semaphore_t *sem2 = sys_sem_create(0);
-  mutex_t *m1 = sys_mutex_create();
-  wrapper_t *parg1 = sys_malloc(sizeof(wrapper_t));
-  parg1->number = 1;
-  parg1->sem1 = sem1;
-  parg1->sem2 = sem2;
-  parg1->m = m1;
-  tcb_t *t3 = sys_task_create(1, low_task, parg1);
-  print("created all 3 tasks\r\n");
-  // *((uint32_t *)0x20001000) = 1;
-  // *((uint32_t *)0x20001004) = 1;
+  // print("[user] in user main\r\n");
+  // semaphore_t *sem1 = sys_sem_create(0);
+  // semaphore_t *sem2 = sys_sem_create(0);
+  // mutex_t *m1 = sys_mutex_create();
+  // wrapper_t *parg1 = sys_malloc(sizeof(wrapper_t));
+  // parg1->number = 1;
+  // parg1->sem1 = sem1;
+  // parg1->sem2 = sem2;
+  // parg1->m = m1;
+  // tcb_t *t3 = sys_task_create(1, low_task, parg1);
+  // print("created all 3 tasks\r\n");
+
+  *((uint32_t *)0x20000c00) = 1;
+  *((uint32_t *)0x20001000) = 1;
+  *((uint32_t *)0x20001004) = 1;
   // *((uint32_t *)0x20001008) = 1;
   // *((uint32_t *)0x2000100C) = 1;
 }

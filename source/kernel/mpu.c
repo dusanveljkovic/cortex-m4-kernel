@@ -10,6 +10,7 @@ void mpu_init(void) {
    *  start: 0x08000000
    *  size: 512KB
    *  privilege: RO/RO
+   *  instruction fetch: ENABLED
    */
   MPU->RNR = MPU_REGION_FLASH;
   MPU->RBAR = 0x08000000;
@@ -20,11 +21,23 @@ void mpu_init(void) {
    *  start: 0x20010000
    *  size: 64KB
    *  privilege: RW/RW
+   *  instruction fetch: DISABLED
    */
   MPU->RNR = MPU_REGION_HEAP;
   MPU->RBAR = 0x20010000;
   MPU->RASR = (MPU_AP_RW_RW << MPU_RASR_AP_Pos) | (15 << MPU_RASR_SIZE_Pos) |
-              (1 << MPU_RASR_ENABLE_Pos);
+              (1 << MPU_RASR_XN_Pos) | (1 << MPU_RASR_ENABLE_Pos);
+
+  /* Kernel stack
+   *  start: 0x
+   *  size: 4KB
+   *  privilege: RW/--
+   *  instruction fetch: DISABLED
+   */
+  MPU->RNR = MPU_REGION_KERNEL_STACK;
+  MPU->RBAR = 0x2001F000;
+  MPU->RASR = (MPU_AP_RW___ << MPU_RASR_AP_Pos) | (11 << MPU_RASR_SIZE_Pos) |
+              (1 << MPU_RASR_XN_Pos) | (1 << MPU_RASR_ENABLE_Pos);
 
   SCB->SHCSR |= SCB_SHCSR_MEMFAULTENABLE;
 

@@ -25,6 +25,7 @@ typedef struct {
 
 #define MPU_AP_RW_RW 0b011
 #define MPU_AP_RO_RO 0b110
+#define MPU_AP_RW___ 0b001
 
 #define MPU_CTRL_ENABLE_Pos 0
 #define MPU_CTRL_PRIVDEFENA_Pos 2
@@ -32,6 +33,7 @@ typedef struct {
 #define MPU_REGION_FLASH 0
 #define MPU_REGION_TASK_STACK 1
 #define MPU_REGION_HEAP 2
+#define MPU_REGION_KERNEL_STACK 7
 
 void mpu_init(void);
 void mpu_set_region(uint32_t region, uintptr_t base, uint32_t size, uint32_t ap,
