@@ -1,3 +1,4 @@
+#include "../../include/cli.h"
 #include "../../include/clock.h"
 #include "../../include/heap.h"
 #include "../../include/mpu.h"
@@ -35,10 +36,13 @@ int main() {
 
   usart2_fault_puts("[boot] successfull\r\n");
 
-  tcb_t *user_task = create_task(0, user_main, 0);
+  tcb_t *user_task = create_task(1, user_main, 0);
+  tcb_t *cli = create_task(0, cli_task, 0);
+  cli->unprivileged = 0;
   tcb_t *idle_task = create_task(0xFF, idle_func, 0);
-  scheduler_put_task(user_task);
+  // scheduler_put_task(user_task);
   scheduler_put_task(idle_task);
+  scheduler_put_task(cli);
 
   systick_init();
 
