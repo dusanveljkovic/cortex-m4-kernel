@@ -30,7 +30,6 @@ void usart2_putc(char c);
 void usart2_puts(const char *str);
 bool usart2_getc(char *c);
 void usart2_test(void);
-void usart2_fault_puts(const char *str);
-void usart2_fault_puthex(uint32_t value);
+void usart2_fault_putc(char c);
 
 #endif // !_USART_H

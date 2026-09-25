@@ -103,21 +103,9 @@ bool usart2_getc(char *c) {
   return true;
 }
 
-void usart2_putc_poll(char c) {
+void usart2_fault_putc(char c) {
   while (!(USART2->SR & USART_SR_TXE))
     ;
 
   USART2->DR = (uint8_t)c;
-}
-
-void usart2_fault_puts(const char *s) {
-  while (*s)
-    usart2_putc_poll(*s++);
-}
-
-void usart2_fault_puthex(uint32_t value) {
-  static const char hex[] = "0123456789abcdef";
-
-  for (int i = 7; i >= 0; i--)
-    usart2_putc_poll(hex[(value >> (i * 4)) & 0xf]);
 }

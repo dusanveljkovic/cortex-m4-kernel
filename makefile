@@ -25,7 +25,8 @@ source/kernel/ring_buffer.c \
 source/kernel/mpu.c \
 source/kernel/sleep.c \
 source/kernel/cli.c \
-source/user/user_main.c
+source/user/user_main.c \
+source/utils.c
 
 FLAGS_INCLUDE = \
 -Iinclude
@@ -54,6 +55,7 @@ endif
 FLAGS_CC =
 FLAGS_CC += $(MCU)
 FLAGS_CC += -MMD -MP
+FLAGS_CC += -fno-builtin
 FLAGS_CC += $(FLAGS_INCLUDE)
 ifeq ($(DEBUG_ENABLED), 1)
 	FLAGS_CC += $(FLAGS_DEBUG)

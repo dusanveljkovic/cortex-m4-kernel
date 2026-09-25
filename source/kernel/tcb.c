@@ -4,8 +4,6 @@
 #include "../../include/static_memory.h"
 #include "../../include/syscall.h"
 
-#define N_TASKS 2
-
 extern uint32_t *task_stack_init(uint32_t *stack_top, void (*func)(void *),
                                  void *args);
 

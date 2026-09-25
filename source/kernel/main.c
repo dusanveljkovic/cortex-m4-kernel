@@ -9,6 +9,7 @@
 #include "../../include/systick.h"
 #include "../../include/tcb.h"
 #include "../../include/usart.h"
+#include "../../include/utils.h"
 
 static uint32_t data = 0;
 
@@ -34,13 +35,15 @@ int main() {
   SCB_SET_PRIORITY(SYSTICK_SHPR, SYSTICK_PRIORITY_POS, 0xE0);
   SCB_SET_PRIORITY(PENDSV_SHPR, PENDSV_PRIORITY_POS, 0xF0);
 
-  usart2_fault_puts("[boot] successfull\r\n");
+  printf("[boot] successfull\r\n");
 
   tcb_t *user_task = create_task(1, user_main, 0);
   tcb_t *cli = create_task(0, cli_task, 0);
+  cli->name = "CLI";
   cli->unprivileged = 0;
   tcb_t *idle_task = create_task(0xFF, idle_func, 0);
-  // scheduler_put_task(user_task);
+  idle_task->name = "IDLE";
+  scheduler_put_task(user_task);
   scheduler_put_task(idle_task);
   scheduler_put_task(cli);
 

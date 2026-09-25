@@ -1,16 +1,14 @@
+#include "../../include/static_memory.h"
 #include "../../include/arm.h"
 #include "../../include/tcb.h"
 #include "stdint.h"
 
-#define N_TASKS 8
-#define TASK_STACK_SIZE 1024
-
-static tcb_t task_slots[N_TASKS + 1];
+static tcb_t task_slots[N_TASKS];
 __attribute__((aligned(
     TASK_STACK_SIZE))) static uint8_t task_stacks[N_TASKS + 1][TASK_STACK_SIZE];
 
 void task_memory_init(void) {
-  for (int i = 0; i < N_TASKS + 1; i++) {
+  for (int i = 0; i < N_TASKS; i++) {
     task_slots[i].state = TASK_UNUSED;
     task_slots[i].sp = 0;
     task_slots[i].base_priority = 0;
@@ -36,6 +34,12 @@ tcb_t *alloc_task(void) {
 
   irq_restore(irq_state);
   return 0;
+}
+
+tcb_t *get_task(int idx) {
+  if (idx >= N_TASKS)
+    return 0;
+  return &task_slots[idx];
 }
 
 void static_memory_init(void) { task_memory_init(); }
