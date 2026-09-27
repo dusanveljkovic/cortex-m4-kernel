@@ -41,5 +41,6 @@ void mutex_init(mutex_t *m);
 sem_result_t mutex_lock(mutex_t *m);
 sem_result_t mutex_unlock(mutex_t *m);
 void mutex_close(mutex_t *m);
+uint32_t mutex_get_waiting(mutex_t *m);
 
 #endif // !_SEMAPHORE_H

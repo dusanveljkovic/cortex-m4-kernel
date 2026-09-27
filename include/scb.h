@@ -22,6 +22,10 @@ typedef struct {
 
 #define SCB ((SCB_RegisterMapType *)0xE000ED00)
 
+#define SCB_AIRCR_VECTKEY 0x5FA
+#define SCB_AIRCR_VECTKEY_Pos 16
+#define SCB_AIRCR_SYSRESETREQ_Pos 2
+
 #define SBC_CCR_DIV_0 (1 << 4)
 #define SCB_SHCSR_USG_FAULT_ENABLE (1 << 18)
 #define SCB_SHCSR_MEMFAULTENABLE (1 << 16)

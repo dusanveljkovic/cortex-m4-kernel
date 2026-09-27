@@ -1,4 +1,7 @@
 #include "../../include/cli.h"
+#include "../../include/arm.h"
+#include "../../include/heap.h"
+#include "../../include/scb.h"
 #include "../../include/static_memory.h"
 #include "../../include/usart.h"
 #include "../../include/utils.h"
@@ -26,7 +29,6 @@ void cli_cmd_uptime(int argc, char **argv);
 void cli_cmd_mem(int argc, char **argv);
 void cli_cmd_heap(int argc, char **argv);
 void cli_cmd_mutex(int argc, char **argv);
-void cli_cmd_sem(int argc, char **argv);
 void cli_cmd_reboot(int argc, char **argv);
 
 static const cli_command_t commands[] = {
@@ -36,7 +38,6 @@ static const cli_command_t commands[] = {
     {"mem", "Print memory usage", cli_cmd_mem},
     {"heap", "Print heap usage", cli_cmd_heap},
     {"mutex", "Print mutex owners/waiters", cli_cmd_mutex},
-    {"sem", "Print semaphore state", cli_cmd_sem},
     {"reboot", "Reboot the MCU", cli_cmd_reboot},
 };
 
@@ -128,7 +129,7 @@ void cli_cmd_ps(int argc, char **argv) {
 }
 
 void cli_cmd_help(int argc, char **argv) {
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < (sizeof(commands) / sizeof(cli_command_t)); i++) {
     const cli_command_t *cmd = &commands[i];
     printf("%s > %s\r\n", cmd->name, cmd->description);
   }
@@ -168,15 +169,57 @@ void cli_cmd_mem(int argc, char **argv) {
 
   printf("SRAM    : %u KB\r\n", (unsigned)(SRAM_END - SRAM_START) / 1024);
 
-  printf(".data   : %u bytes\r\n", data_size);
-  printf(".bss    : %u bytes\r\n", bss_size);
-  printf("static  : %u bytes\r\n", static_used);
+  printf("  .data   : %u bytes\r\n", data_size);
+  printf("  .bss    : %u bytes\r\n", bss_size);
+  printf("  static  : %u bytes\r\n", static_used);
 
   printf("heap    : %u KB\r\n", (heap_size / 1024));
-  printf("heap @  : %x\r\n", (uint32_t)heap_start);
-  printf("heap -> : %x\r\n", (uint32_t)heap_end);
+  printf("  start   : %x\r\n", (uint32_t)heap_start);
+  printf("  end     : %x\r\n", (uint32_t)heap_end);
 }
-void cli_cmd_heap(int argc, char **argv) { printf("not implemented\r\n"); }
-void cli_cmd_mutex(int argc, char **argv) { printf("not implemented\r\n"); }
-void cli_cmd_sem(int argc, char **argv) { printf("not implemented\r\n"); }
-void cli_cmd_reboot(int argc, char **argv) { printf("not implemented\r\n"); }
+void cli_cmd_heap(int argc, char **argv) {
+  uintptr_t heap_start = (uintptr_t)&_heap_start;
+  uintptr_t heap_end = (uintptr_t)&_heap_end;
+
+  uint32_t heap_size = heap_end - heap_start;
+  uint32_t heap_free = heap_free_size();
+
+  printf("Heap\r\n");
+  printf("----------------------------\r\n");
+  printf("size    : %u KB\r\n", (heap_size / 1024));
+  printf("used    : %u\r\n", (heap_size - heap_free));
+  printf("free    : %u\r\n", heap_free);
+  printf("start   : %x\r\n", (uint32_t)heap_start);
+  printf("end     : %x\r\n", (uint32_t)heap_end);
+}
+void cli_cmd_mutex(int argc, char **argv) {
+  printf("Mutexes\r\n");
+  printf("----------------------------\r\n");
+  printf("ID\tOWNER\tWAITING\r\n");
+  for (int i = 0; i < N_TASKS; i++) {
+    tcb_t *task = get_task(i);
+    if (task->state == TASK_UNUSED)
+      continue;
+
+    mutex_t *tmp_m = task->owned_mutexes;
+    int j = 0;
+    while (tmp_m) {
+      printf("%d\t%d\t%d\r\n", j, i, mutex_get_waiting(tmp_m));
+      tmp_m = tmp_m->next_owned;
+    }
+  }
+}
+
+__attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {
+  printf("Rebooting ...");
+
+  __DSB();
+
+  SCB->AIRCR = (SCB_AIRCR_VECTKEY << SCB_AIRCR_VECTKEY_Pos) |
+               (1 << SCB_AIRCR_SYSRESETREQ_Pos);
+
+  __DSB();
+
+  while (1)
+    ;
+}

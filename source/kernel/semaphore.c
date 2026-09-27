@@ -163,3 +163,14 @@ sem_result_t mutex_unlock(mutex_t *m) {
   irq_restore(irq_state);
   return SEM_OK;
 }
+
+uint32_t mutex_get_waiting(mutex_t *m) {
+  tcb_list_t *list = &m->wait_queue;
+  tcb_t *tmp = list->head;
+  uint32_t count;
+  while (tmp) {
+    count++;
+    tmp = tmp->next;
+  }
+  return count;
+}

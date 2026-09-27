@@ -102,3 +102,15 @@ void kfree(void *ptr) {
 
   irq_restore(irq_state);
 }
+
+uint32_t heap_free_size(void) {
+  heap_block_t *tmp = heap_head;
+  uint32_t size = 0;
+  while (tmp) {
+    if (tmp->free) {
+      size += tmp->size;
+    }
+    tmp = tmp->next;
+  }
+  return size;
+}
