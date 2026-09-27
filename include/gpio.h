@@ -33,9 +33,13 @@ typedef struct {
   gpio->OSPEEDR |= (speed << (2 * pin_number));
 
 #define SET_GPIO_PUPDR(gpio, pup, pin_number)                                  \
-  gpio->PUPDR &= (0b11 << (2 * pin_number));                                   \
+  gpio->PUPDR &= ~(0b11 << (2 * pin_number));                                  \
   gpio->PUPDR |= (pup << (2 * pin_number));
 
+#define GPIO_PIN_HIGH(gpio, pin) gpio->BSRR = (1 << pin);
+#define GPIO_PIN_LOW(gpio, pin) gpio->BSRR = (1 << (pin + 16));
+
+#define GPIO_MODE_OUTPUT 0b01
 #define GPIO_MODE_AF 0b10
 
 #define GPIO_OSPEEDR_MEDIUM 0b01

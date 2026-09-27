@@ -10,6 +10,7 @@
 #include "../../include/tcb.h"
 #include "../../include/usart.h"
 #include "../../include/utils.h"
+#include "../drivers/spi.h"
 
 static uint32_t data = 0;
 
@@ -24,6 +25,7 @@ void idle_func(void *a) {
 int main() {
   clock_init();
   usart2_init();
+  spi1_init();
 
   static_memory_init();
   heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
@@ -36,6 +38,17 @@ int main() {
   SCB_SET_PRIORITY(PENDSV_SHPR, PENDSV_PRIORITY_POS, 0xF0);
 
   printf("[boot] successfull\r\n");
+  uint8_t tx = 0xA5;
+  uint8_t rx = spi1_transfer(tx);
+  printf("SPI TX=%x\tRX=%x\r\n", tx, rx);
+  rx = spi1_transfer(tx);
+  printf("SPI TX=%x\tRX=%x\r\n", tx, rx);
+  rx = spi1_transfer(tx);
+  printf("SPI TX=%x\tRX=%x\r\n", tx, rx);
+  rx = spi1_transfer(tx);
+  printf("SPI TX=%x\tRX=%x\r\n", tx, rx);
+  rx = spi1_transfer(tx);
+  printf("SPI TX=%x\tRX=%x\r\n", tx, rx);
 
   tcb_t *user_task = create_task(1, user_main, 0);
   tcb_t *cli = create_task(0, cli_task, 0);

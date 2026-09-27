@@ -26,10 +26,12 @@ source/kernel/mpu.c \
 source/kernel/sleep.c \
 source/kernel/cli.c \
 source/user/user_main.c \
+source/drivers/spi.c \
 source/utils.c
 
 FLAGS_INCLUDE = \
--Iinclude
+-Iinclude \
+-Isource/drivers
 
 OBJECTS_LIST = 
 OBJECTS_LIST += $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCE_S_LIST:.s=.o)))

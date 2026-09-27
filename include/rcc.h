@@ -12,6 +12,7 @@ typedef struct {
   uint32_t AHB1ENR;
   uint32_t dummy2[3];
   uint32_t APB1ENR;
+  uint32_t APB2ENR;
 } RCC_RegisterMap;
 
 #define RCC ((RCC_RegisterMap *)0x40023800)
@@ -47,5 +48,6 @@ typedef struct {
 
 #define RCC_AHB1ENR_GPIOAEN (1 << 0)
 #define RCC_APB1ENR_USART2EN (1 << 17)
+#define RCC_APB2ENR_SPI1EN (1 << 12)
 
 #endif // !_RCC_H
