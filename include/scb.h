@@ -52,6 +52,6 @@ typedef struct {
 #define SCB_CFSR_MSTKERR_Pos 4
 #define SCB_CFSR_MSTKERR_Msk (1 << SCB_CFSR_MSTKERR_Pos)
 #define SCB_CFSR_MMARVALID_Pos 7
-#define SCB_CFSR_MMARVALID_Msk (1 < SCB_CFSR_MMARVALID_Pos)
+#define SCB_CFSR_MMARVALID_Msk (1 << SCB_CFSR_MMARVALID_Pos)
 
 #endif // !_SCB_H

@@ -156,8 +156,8 @@ sem_result_t mutex_unlock(mutex_t *m) {
 
   if (next != 0 &&
       next->effective_priority < current_task->effective_priority) {
-    return SEM_OK_YIELD;
     irq_restore(irq_state);
+    return SEM_OK_YIELD;
   }
 
   irq_restore(irq_state);
@@ -167,7 +167,7 @@ sem_result_t mutex_unlock(mutex_t *m) {
 uint32_t mutex_get_waiting(mutex_t *m) {
   tcb_list_t *list = &m->wait_queue;
   tcb_t *tmp = list->head;
-  uint32_t count;
+  uint32_t count = 0;
   while (tmp) {
     count++;
     tmp = tmp->next;

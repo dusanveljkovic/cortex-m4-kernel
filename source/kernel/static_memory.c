@@ -37,7 +37,7 @@ tcb_t *alloc_task(void) {
 }
 
 tcb_t *get_task(int idx) {
-  if (idx >= N_TASKS)
+  if (idx >= N_TASKS || idx < 0)
     return 0;
   return &task_slots[idx];
 }

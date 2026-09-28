@@ -49,7 +49,7 @@ static void w5500_write8(uint16_t addr, uint8_t bsb, uint8_t v) {
 static uint16_t w5500_read16(uint16_t addr, uint8_t bsb) {
   uint8_t v[2];
   w5500_read(addr, bsb, v, 2);
-  return ((uint16_t)v[0] << 16) | v[1];
+  return ((uint16_t)v[0] << 8) | v[1];
 }
 
 static uint16_t w5500_read16_stable(uint16_t addr, uint8_t bsb) {

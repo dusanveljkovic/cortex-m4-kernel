@@ -22,7 +22,7 @@ void spi1_init(void) {
 
   uint8_t pins[] = {SPI1_PIN_SCK, SPI1_PIN_MISO, SPI1_PIN_MOSI};
   for (int i = 0; i < 3; i++) {
-    SET_GPIO_MODE(GPIOA, GPIO_MODE_OUTPUT, pins[i]);
+    SET_GPIO_MODE(GPIOA, GPIO_MODE_AF, pins[i]);
     SET_GPIO_OTYPER(GPIOA, 0, pins[i]);
     SET_GPIO_OSPEEDR(GPIOA, GPIO_OSPEEDR_FAST, pins[i]);
     SET_GPIO_PUPDR(GPIOA, GPIO_PUPDR_NOPP, pins[i]);

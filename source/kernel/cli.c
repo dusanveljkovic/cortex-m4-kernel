@@ -82,7 +82,7 @@ void cli_task(void *arg) {
 void cli_execute(const char *line) {
   if (line[0] == '\0')
     return;
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < (sizeof(commands) / sizeof(cli_command_t)); i++) {
     const cli_command_t *cmd = &commands[i];
     if (strcmp(cmd->name, line) == 0) {
       cmd->function(0, 0);

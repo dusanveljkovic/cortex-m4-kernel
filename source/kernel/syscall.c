@@ -13,7 +13,7 @@
 void *syscall(uint32_t number, uintptr_t arg2, uintptr_t arg3, uintptr_t arg4) {
   register uint32_t r0 asm("r0") = number;
   asm volatile("svc #0" ::"r"(r0) : "memory");
-  return (void *)r0;
+  return (void *)(uintptr_t)r0;
 }
 
 inline void sys_yield(void) { syscall(SYS_YIELD, 0, 0, 0); }
@@ -61,9 +61,10 @@ inline void sys_task_set_name(tcb_t *task, const char *name) {
 inline void sys_sleep(uint32_t ticks) { syscall(SYS_SLEEP, ticks, 0, 0); }
 
 inline void sys_putc(char c) { syscall(SYS_PUTC, (uintptr_t)c, 0, 0); }
-inline bool sys_getc(char *c) { syscall(SYS_GETC, (uintptr_t)c, 0, 0); }
+inline bool sys_getc(char *c) { return syscall(SYS_GETC, (uintptr_t)c, 0, 0); }
 inline int sys_console_write(const char *buf, uint32_t len) {
-  syscall(SYS_CONSOLE_WRITE, (uintptr_t)buf, (uintptr_t)len, 0);
+  return (int)(uintptr_t)syscall(SYS_CONSOLE_WRITE, (uintptr_t)buf,
+                                 (uintptr_t)len, 0);
 }
 
 void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
@@ -186,7 +187,7 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     asm volatile("isb");
   }
 
-  *(uint32_t *)arg1 = (uint32_t)ret;
+  *(uint32_t *)arg1 = (uint32_t)(uintptr_t)ret;
 
   return;
 }
