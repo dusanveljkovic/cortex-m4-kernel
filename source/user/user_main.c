@@ -1,6 +1,6 @@
-#include "../../include/mpu.h"
 #include "../../include/semaphore.h"
 #include "../../include/syscall.h"
+#include "uprintf.h"
 #include <stdint.h>
 
 typedef struct {
@@ -60,6 +60,8 @@ void med_task(void *arg) {
 void low_task(void *arg) {
   tcb_t *t1 = sys_task_create(1, high_task, arg);
   tcb_t *t2 = sys_task_create(1, med_task, arg);
+  sys_task_set_name(t1, "high task");
+  sys_task_set_name(t2, "med task");
   // tcb_t *t3 = sys_task_create(2, med_task, arg);
 
   wrapper_t w = *(wrapper_t *)arg;
@@ -92,7 +94,9 @@ void user_main(void *arg) {
   parg1->sem1 = sem1;
   parg1->sem2 = sem2;
   parg1->m = m1;
+  uprintf("[user] user task\r\n");
   tcb_t *t3 = sys_task_create(1, low_task, parg1);
+  sys_task_set_name(t3, "low task");
 
   // *((uint32_t *)0x20000c00) = 1;
   // *((uint32_t *)0x20001000) = 1;

@@ -24,11 +24,13 @@ enum {
 
   SYS_TASK_CREATE,
   SYS_TASK_EXIT,
+  SYS_TASK_SET_NAME,
 
   SYS_SLEEP,
 
   SYS_PUTC,
   SYS_GETC,
+  SYS_CONSOLE_WRITE,
 };
 
 void sys_yield(void);
@@ -49,11 +51,13 @@ void sys_mutex_close(mutex_t *m);
 
 tcb_t *sys_task_create(uint8_t priority, void (*func)(void *), void *args);
 void sys_task_exit(void);
+void sys_task_set_name(tcb_t *task, const char *name);
 
 void sys_sleep(uint32_t ticks);
 
 void sys_putc(char c);
 bool sys_getc(char *c);
+int sys_console_write(const char *buf, uint32_t len);
 
 void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
                   uintptr_t arg4);

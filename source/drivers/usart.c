@@ -1,4 +1,4 @@
-#include "../../include/usart.h"
+#include "usart.h"
 #include "../../include/gpio.h"
 #include "../../include/nvic.h"
 #include "../../include/rcc.h"

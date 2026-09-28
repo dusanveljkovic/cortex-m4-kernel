@@ -1,4 +1,5 @@
 #include "../../include/syscall.h"
+#include "../../include/console.h"
 #include "../../include/heap.h"
 #include "../../include/scb.h"
 #include "../../include/scheduler.h"
@@ -6,7 +7,6 @@
 #include "../../include/sleep.h"
 #include "../../include/static_memory.h"
 #include "../../include/tcb.h"
-#include "../../include/usart.h"
 #include "stdint.h"
 #include <stdint.h>
 
@@ -54,11 +54,17 @@ inline void sys_mutex_unlock(mutex_t *m) {
 }
 
 inline void sys_task_exit(void) { syscall(SYS_TASK_EXIT, 0, 0, 0); }
+inline void sys_task_set_name(tcb_t *task, const char *name) {
+  syscall(SYS_TASK_SET_NAME, (uintptr_t)task, (uintptr_t)name, 0);
+}
 
 inline void sys_sleep(uint32_t ticks) { syscall(SYS_SLEEP, ticks, 0, 0); }
 
 inline void sys_putc(char c) { syscall(SYS_PUTC, (uintptr_t)c, 0, 0); }
 inline bool sys_getc(char *c) { syscall(SYS_GETC, (uintptr_t)c, 0, 0); }
+inline int sys_console_write(const char *buf, uint32_t len) {
+  syscall(SYS_CONSOLE_WRITE, (uintptr_t)buf, (uintptr_t)len, 0);
+}
 
 void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
                   uintptr_t arg4) {
@@ -145,17 +151,30 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     current_task->state = TASK_FINISHED;
     should_yield = 1;
     break;
+  case SYS_TASK_SET_NAME: {
+    tcb_t *task = (tcb_t *)arg2;
+    if (task != 0)
+      task->name = (char *)arg3;
+    break;
+  }
   case SYS_SLEEP:
     sleep_for_ticks((uint32_t)arg2);
     should_yield = 1;
     break;
 
   case SYS_PUTC: {
-    usart2_putc((char)arg2);
+    char c = (char)arg2;
+    console_write(&c, 1);
     break;
   }
   case SYS_GETC: {
-    ret = (uint32_t *)usart2_getc((char *)arg2);
+    ret = (uint32_t *)(uintptr_t)(console_read((uint8_t *)arg2, 1) > 0);
+    break;
+  }
+  case SYS_CONSOLE_WRITE: {
+    uint32_t len = (uint32_t)arg3;
+    console_write((const char *)arg2, len);
+    ret = (uint32_t *)(uintptr_t)len;
     break;
   }
   }

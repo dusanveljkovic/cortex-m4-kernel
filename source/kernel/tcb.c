@@ -31,8 +31,14 @@ tcb_t *create_task(uint8_t priority, void (*func)(void *), void *args) {
   task->effective_priority = priority;
   task->owned_mutexes = 0;
   task->unprivileged = 1;
+  task->name = 0;
 
   return task;
+}
+
+void task_set_name(tcb_t *task, const char *name) {
+  if (task != 0)
+    task->name = name;
 }
 
 uint8_t task_recalculate_priority(tcb_t *task) {

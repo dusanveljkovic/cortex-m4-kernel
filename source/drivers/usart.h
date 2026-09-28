@@ -1,6 +1,7 @@
 #ifndef _USART_H
 #define _USART_H
 
+#include "../../include/driver.h"
 #include "stdbool.h"
 #include "stdint.h"
 
@@ -31,5 +32,7 @@ void usart2_puts(const char *str);
 bool usart2_getc(char *c);
 void usart2_test(void);
 void usart2_fault_putc(char c);
+
+extern const driver_t usart2_driver;
 
 #endif // !_USART_H

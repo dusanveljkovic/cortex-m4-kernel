@@ -1,9 +1,10 @@
 #include "../../include/cli.h"
 #include "../../include/arm.h"
+#include "../../include/console.h"
 #include "../../include/heap.h"
+#include "../../include/kprintf.h"
 #include "../../include/scb.h"
 #include "../../include/static_memory.h"
-#include "../../include/usart.h"
 #include "../../include/utils.h"
 #include "stdint.h"
 
@@ -44,7 +45,7 @@ static const cli_command_t commands[] = {
 int cli_input_char(char c) {
   if (c == '\r' || c == '\n') {
     cli_buffer[cli_pos] = '\0';
-    printf("\r\n");
+    kprintf("\r\n");
     cli_execute(cli_buffer);
     cli_pos = 0;
     return 1;
@@ -53,27 +54,27 @@ int cli_input_char(char c) {
   if (c == '\b' || c == 127) {
     if (cli_pos > 0) {
       cli_pos--;
-      printf("\b \b");
+      kprintf("\b \b");
     }
     return 0;
   }
 
   if (cli_pos < CLI_BUFFER_SIZE - 1) {
     cli_buffer[cli_pos++] = c;
-    usart2_putc(c);
+    console_write(&c, 1);
   }
   return 0;
 }
 
 void cli_task(void *arg) {
-  printf("\r\nCLI\r\n");
-  printf("> ");
+  kprintf("\r\nCLI\r\n");
+  kprintf("> ");
 
   while (1) {
     char c;
-    usart2_getc(&c);
+    console_read((uint8_t *)&c, 1);
     if (cli_input_char(c) == 1) {
-      printf("> ");
+      kprintf("> ");
     }
   }
 }
@@ -88,12 +89,12 @@ void cli_execute(const char *line) {
       return;
     }
   }
-  printf("unknown command %s\r\n", line);
+  kprintf("unknown command %s\r\n", line);
 }
 
 void cli_cmd_ps(int argc, char **argv) {
-  printf("PID\tNAME\tSTATE\tPRI EPRI\tSP\r\n");
-  printf("-----------------------\r\n");
+  kprintf("PID\tNAME\tSTATE\tPRI EPRI\tSP\r\n");
+  kprintf("--------------------------------------\r\n");
 
   for (int i = 0; i < N_TASKS; i++) {
     tcb_t *task = get_task(i);
@@ -122,20 +123,20 @@ void cli_cmd_ps(int argc, char **argv) {
       state = "UNKNOWN";
       break;
     }
-    printf("%u\t%s\t%s\t%u %u\t%x\t%s\r\n", (unsigned)i, task->name, state,
-           task->base_priority, task->effective_priority, (uint32_t)task->sp,
-           task == current_task ? "*" : "");
+    kprintf("%2u %10s %10s %3u %3u %8x %s\r\n", (unsigned)i, task->name, state,
+            task->base_priority, task->effective_priority, (uint32_t)task->sp,
+            task == current_task ? "*" : "");
   }
 }
 
 void cli_cmd_help(int argc, char **argv) {
   for (int i = 0; i < (sizeof(commands) / sizeof(cli_command_t)); i++) {
     const cli_command_t *cmd = &commands[i];
-    printf("%s > %s\r\n", cmd->name, cmd->description);
+    kprintf("%s > %s\r\n", cmd->name, cmd->description);
   }
 }
 void cli_cmd_uptime(int argc, char **argv) {
-  printf("Uptime: %u ms\r\n", system_ticks);
+  kprintf("Uptime: %u ms\r\n", system_ticks);
 }
 
 extern uint8_t _vma_data_start;
@@ -164,18 +165,18 @@ void cli_cmd_mem(int argc, char **argv) {
 
   uint32_t static_used = data_size + bss_size;
 
-  printf("Memory\r\n");
-  printf("----------------------------\r\n");
+  kprintf("Memory\r\n");
+  kprintf("----------------------------\r\n");
 
-  printf("SRAM    : %u KB\r\n", (unsigned)(SRAM_END - SRAM_START) / 1024);
+  kprintf("SRAM    : %u KB\r\n", (unsigned)(SRAM_END - SRAM_START) / 1024);
 
-  printf("  .data   : %u bytes\r\n", data_size);
-  printf("  .bss    : %u bytes\r\n", bss_size);
-  printf("  static  : %u bytes\r\n", static_used);
+  kprintf("  .data   : %u bytes\r\n", data_size);
+  kprintf("  .bss    : %u bytes\r\n", bss_size);
+  kprintf("  static  : %u bytes\r\n", static_used);
 
-  printf("heap    : %u KB\r\n", (heap_size / 1024));
-  printf("  start   : %x\r\n", (uint32_t)heap_start);
-  printf("  end     : %x\r\n", (uint32_t)heap_end);
+  kprintf("heap    : %u KB\r\n", (heap_size / 1024));
+  kprintf("  start   : %x\r\n", (uint32_t)heap_start);
+  kprintf("  end     : %x\r\n", (uint32_t)heap_end);
 }
 void cli_cmd_heap(int argc, char **argv) {
   uintptr_t heap_start = (uintptr_t)&_heap_start;
@@ -184,18 +185,18 @@ void cli_cmd_heap(int argc, char **argv) {
   uint32_t heap_size = heap_end - heap_start;
   uint32_t heap_free = heap_free_size();
 
-  printf("Heap\r\n");
-  printf("----------------------------\r\n");
-  printf("size    : %u KB\r\n", (heap_size / 1024));
-  printf("used    : %u\r\n", (heap_size - heap_free));
-  printf("free    : %u\r\n", heap_free);
-  printf("start   : %x\r\n", (uint32_t)heap_start);
-  printf("end     : %x\r\n", (uint32_t)heap_end);
+  kprintf("Heap\r\n");
+  kprintf("----------------------------\r\n");
+  kprintf("size    : %u KB\r\n", (heap_size / 1024));
+  kprintf("used    : %u\r\n", (heap_size - heap_free));
+  kprintf("free    : %u\r\n", heap_free);
+  kprintf("start   : %x\r\n", (uint32_t)heap_start);
+  kprintf("end     : %x\r\n", (uint32_t)heap_end);
 }
 void cli_cmd_mutex(int argc, char **argv) {
-  printf("Mutexes\r\n");
-  printf("----------------------------\r\n");
-  printf("ID\tOWNER\tWAITING\r\n");
+  kprintf("Mutexes\r\n");
+  kprintf("----------------------------\r\n");
+  kprintf("ID\tOWNER\tWAITING\r\n");
   for (int i = 0; i < N_TASKS; i++) {
     tcb_t *task = get_task(i);
     if (task->state == TASK_UNUSED)
@@ -204,14 +205,14 @@ void cli_cmd_mutex(int argc, char **argv) {
     mutex_t *tmp_m = task->owned_mutexes;
     int j = 0;
     while (tmp_m) {
-      printf("%d\t%d\t%d\r\n", j, i, mutex_get_waiting(tmp_m));
+      kprintf("%d\t%d\t%d\r\n", j, i, mutex_get_waiting(tmp_m));
       tmp_m = tmp_m->next_owned;
     }
   }
 }
 
 __attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {
-  printf("Rebooting ...");
+  kprintf("Rebooting ...");
 
   __DSB();
 

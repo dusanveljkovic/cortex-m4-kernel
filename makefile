@@ -20,18 +20,24 @@ source/kernel/static_memory.c \
 source/kernel/semaphore.c \
 source/kernel/heap.c \
 source/kernel/clock.c \
-source/kernel/usart.c \
 source/kernel/ring_buffer.c \
 source/kernel/mpu.c \
 source/kernel/sleep.c \
 source/kernel/cli.c \
+source/kernel/console.c \
+source/kernel/kprintf.c \
+source/kernel/driver.c \
 source/user/user_main.c \
+source/user/uprintf.c \
 source/drivers/spi.c \
+source/drivers/usart.c \
+source/drivers/usart_driver.c \
 source/utils.c
 
 FLAGS_INCLUDE = \
 -Iinclude \
--Isource/drivers
+-Isource/drivers \
+-Isource/user
 
 OBJECTS_LIST = 
 OBJECTS_LIST += $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCE_S_LIST:.s=.o)))
