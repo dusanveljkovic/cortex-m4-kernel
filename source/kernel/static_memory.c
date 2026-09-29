@@ -5,7 +5,7 @@
 
 static tcb_t task_slots[N_TASKS];
 __attribute__((aligned(
-    TASK_STACK_SIZE))) static uint8_t task_stacks[N_TASKS + 1][TASK_STACK_SIZE];
+    TASK_STACK_SIZE))) static uint8_t task_stacks[N_TASKS][TASK_STACK_SIZE];
 
 void task_memory_init(void) {
   for (int i = 0; i < N_TASKS; i++) {
