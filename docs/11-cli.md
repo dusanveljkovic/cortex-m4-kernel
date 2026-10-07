@@ -9,7 +9,7 @@ privileged because it needs to read kernel internal state.
 
 ## How input is handled
 
-`cli_task` loops calling `console_read()` one character at a time (blocking,
+`cli_task` loops calling `console_read_blocking()` one character at a time (blocking,
 see [USART2 Driver](09-usart-driver.md)) and feeds each character to
 `cli_input_char()`:
 

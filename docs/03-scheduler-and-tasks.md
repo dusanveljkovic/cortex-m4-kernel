@@ -86,6 +86,11 @@ in a system with only one core.
 
 ## Context switching
 
+Function `request_context_switch()` defined in `arm.h/arm.c` enqueues the current task and sets the PendSV bit in SCB so the system knows to execute a context switch. This happens only if all of these criteria are met:
+1. PendSV pending bit is 0, this is checked because a systick can preempt pendsv when a context switch is requested from syscall which can enqueue the same task twice
+2. The next task exists
+3. Current task is RUNNING and the next task has the same or higher priority than it (the RUNNING check is here because if a task is BLOCKED or SLEEPING the priority of the next task doesn't matter)
+
 `scheduler_select_next()` just pops the ready queue (falling back to
 re-running `current_task` if the queue is empty - there's always at least the
 `IDLE` task in it in practice, so this fallback is mostly a safety net) and
@@ -102,8 +107,7 @@ directly touches `current_task`'s saved stack pointer.
 1. Increments a tick counter.
 2. Calls `sleep_tick()` (`sleep.c`), which wakes any tasks whose
    `wake_tick` has arrived and re-queues them.
-3. Re-queues `current_task` (round-robining it behind any other ready task at
-   the same priority) and pends `PendSV`
+3. Requests a context switch via `request_context_switch()` which decides if a context switch should happen
 
 `sleep_for_ticks(ticks)` (used by the `SYS_SLEEP` syscall) marks the calling
 task `TASK_SLEEPING`, computes its `wake_tick`, and inserts it into a
