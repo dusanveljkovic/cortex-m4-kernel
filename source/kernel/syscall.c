@@ -92,7 +92,8 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
   case SYS_SEM_CREATE: {
     uint32_t count = (uint32_t)arg2;
     ret = (uint32_t *)kmalloc(sizeof(semaphore_t));
-    semaphore_init((semaphore_t *)ret, count);
+    if (ret != 0)
+      semaphore_init((semaphore_t *)ret, count);
     break;
   }
   case SYS_SEM_WAIT: {
@@ -120,7 +121,8 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
 
   case SYS_MUTEX_CREATE: {
     ret = (uint32_t *)kmalloc(sizeof(mutex_t));
-    mutex_init((mutex_t *)ret);
+    if (ret != 0)
+      mutex_init((mutex_t *)ret);
     break;
   }
   case SYS_MUTEX_LOCK: {
@@ -169,7 +171,7 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     break;
   }
   case SYS_GETC: {
-    ret = (uint32_t *)(uintptr_t)(console_read((uint8_t *)arg2, 1) > 0);
+    ret = (uint32_t *)(uintptr_t)(console_read((uint8_t *)arg2, 1));
     break;
   }
   case SYS_CONSOLE_WRITE: {

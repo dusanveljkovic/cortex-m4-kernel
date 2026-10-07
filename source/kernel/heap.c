@@ -34,7 +34,7 @@ void *kmalloc(uint32_t size) {
   heap_block_t *tmp = heap_head;
   while (tmp != 0) {
     if (tmp->free && tmp->size >= size) {
-      if (tmp->size >= size + sizeof(heap_block_t) + HEAP_ALIGMENT) {
+      if (tmp->size >= (size + sizeof(heap_block_t) + HEAP_ALIGMENT)) {
         heap_block_t *new_block = (heap_block_t *)((uint8_t *)(tmp + 1) + size);
         new_block->size = tmp->size - size - sizeof(heap_block_t);
 
@@ -43,7 +43,6 @@ void *kmalloc(uint32_t size) {
 
         tmp->size = size;
         tmp->next = new_block;
-        tmp->prev = new_block->prev;
 
         new_block->prev = tmp;
       }
@@ -89,7 +88,8 @@ void kfree(void *ptr) {
     block->size += sizeof(heap_block_t) + next->size;
 
     block->next = next->next;
-    block->next->prev = block;
+    if (block->next != 0)
+      block->next->prev = block;
   }
 
   if (block->prev != 0 && block->prev->free) {
@@ -97,7 +97,8 @@ void kfree(void *ptr) {
     prev->size += sizeof(heap_block_t) + block->size;
 
     prev->next = block->next;
-    prev->next->prev = prev;
+    if (prev->next != 0)
+      prev->next->prev = prev;
   }
 
   irq_restore(irq_state);

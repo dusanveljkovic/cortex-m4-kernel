@@ -21,8 +21,8 @@ typedef struct {
   gpio->MODER |= (function << (2 * pin_number));
 
 #define SET_GPIO_AF(gpio, function, pin_number)                                \
-  gpio->AFR[pin_number / 8] &= ~(0b1111 << (4 * pin_number));                  \
-  gpio->AFR[pin_number / 8] |= (function << (4 * pin_number));
+  gpio->AFR[pin_number / 8] &= ~(0b1111 << (4 * (pin_number % 8)));            \
+  gpio->AFR[pin_number / 8] |= (function << (4 * (pin_number % 8)));
 
 #define SET_GPIO_OTYPER(gpio, open_drain, pin_number)                          \
   gpio->OTYPER &= ~(1 << pin_number);                                          \

@@ -29,7 +29,6 @@ void usart2_handler(void) {
   if (USART2->SR & USART_SR_RXNE) {
     if (!ring_buffer_full(&rx_ring_buffer)) {
       ring_buffer_put(&rx_ring_buffer, USART2->DR);
-      semaphore_post(&rx_sem);
     }
   }
 }
@@ -96,7 +95,8 @@ void usart2_puts(const char *str) {
 }
 
 bool usart2_getc(char *c) {
-  sys_sem_wait(&rx_sem);
+  if (ring_buffer_empty(&rx_ring_buffer))
+    return false;
 
   *c = ring_buffer_get(&rx_ring_buffer);
 

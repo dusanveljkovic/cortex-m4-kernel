@@ -32,6 +32,10 @@ tcb_t *create_task(uint8_t priority, void (*func)(void *), void *args) {
   task->owned_mutexes = 0;
   task->unprivileged = 1;
   task->name = 0;
+  task->next = 0;
+  task->waiting_on = 0;
+  task->waiting_on_type = NONE;
+  task->wake_tick = 0;
 
   return task;
 }
