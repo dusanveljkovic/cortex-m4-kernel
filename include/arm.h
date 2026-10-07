@@ -17,6 +17,7 @@ static inline uint32_t irq_save(void) {
 static inline void irq_restore(uint32_t primask) {
   asm volatile("msr primask, %0" : : "r"(primask) : "memory");
 }
+void request_context_switch(void);
 
 #define __DSB() asm volatile("dsb");
 #define __ISB() asm volatile("isb");

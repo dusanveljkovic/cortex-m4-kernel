@@ -1,11 +1,10 @@
 #include "../../include/syscall.h"
+#include "../../include/arm.h"
 #include "../../include/console.h"
 #include "../../include/heap.h"
-#include "../../include/scb.h"
 #include "../../include/scheduler.h"
 #include "../../include/semaphore.h"
 #include "../../include/sleep.h"
-#include "../../include/static_memory.h"
 #include "../../include/tcb.h"
 #include "stdint.h"
 #include <stdint.h>
@@ -183,10 +182,7 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
   }
 
   if (should_yield == 1) {
-    scheduler_put_task(current_task);
-    SCB->ICSR |= ICSR_PENDSV_SET;
-    asm volatile("dsb");
-    asm volatile("isb");
+    request_context_switch();
   }
 
   *(uint32_t *)arg1 = (uint32_t)(uintptr_t)ret;

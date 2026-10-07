@@ -13,6 +13,8 @@ typedef struct driver {
   int (*write_sync)(const uint8_t *buf, uint32_t len);
 
   int (*read)(uint8_t *buf, uint32_t len);
+
+  int (*read_blocking)(uint8_t *buf, uint32_t len);
 } driver_t;
 
 #define DRIVER_MAX 8

@@ -63,3 +63,15 @@ int console_read(uint8_t *buf, uint32_t len) {
   }
   return 0;
 }
+
+int console_read_blocking(uint8_t *buf, uint32_t len) {
+  for (int i = 0; i < CONSOLE_MAX_SINKS; i++) {
+    const driver_t *sink = sinks[i];
+    if (sink != 0 && sink->read_blocking != 0) {
+      int n = sink->read_blocking(buf, len);
+      if (n > 0)
+        return n;
+    }
+  }
+  return 0;
+}

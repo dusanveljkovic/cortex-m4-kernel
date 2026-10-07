@@ -19,6 +19,7 @@ void scheduler_init(void);
 void scheduler_select_next(void);
 void scheduler_put_task(tcb_t *task);
 void scheduler_reorder(tcb_t *task);
+tcb_t *scheduler_next_task(void);
 
 extern volatile tcb_t *current_task;
 extern volatile tcb_t *next_task;

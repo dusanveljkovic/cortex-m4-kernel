@@ -72,7 +72,8 @@ void cli_task(void *arg) {
 
   while (1) {
     char c;
-    console_read((uint8_t *)&c, 1);
+    // block until something is read so other tasks can ru
+    console_read_blocking((uint8_t *)&c, 1);
     if (cli_input_char(c) == 1) {
       kprintf("> ");
     }

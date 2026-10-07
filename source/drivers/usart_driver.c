@@ -26,8 +26,17 @@ static int usart2_drv_read(uint8_t *buf, uint32_t len) {
   return (int)n;
 }
 
+static int usart2_drv_read_blocking(uint8_t *buf, uint32_t len) {
+  uint32_t n = 0;
+  char c;
+  while (n < len && usart2_getc_blocking(&c))
+    buf[n++] = (uint8_t)c;
+  return (int)n;
+}
+
 const driver_t usart2_driver = {.name = "usart2",
                                 .init = usart2_drv_init,
                                 .write = usart2_drv_write,
                                 .write_sync = usart2_drv_write_sync,
-                                .read = usart2_drv_read};
+                                .read = usart2_drv_read,
+                                .read_blocking = usart2_drv_read_blocking};

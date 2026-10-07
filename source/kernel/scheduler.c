@@ -43,6 +43,9 @@ void scheduler_select_next(void) {
   next_task = current_task;
 }
 
+// gets the next task without setting it as a running task
+tcb_t *scheduler_next_task(void) { return ready_queue.head; }
+
 void scheduler_reorder(tcb_t *task) {
   uint32_t irq_state = irq_save();
   priority_queue_reoder(&ready_queue, task);

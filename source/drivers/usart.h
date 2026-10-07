@@ -30,6 +30,7 @@ void usart2_init(void);
 void usart2_putc(char c);
 void usart2_puts(const char *str);
 bool usart2_getc(char *c);
+bool usart2_getc_blocking(char *c);
 void usart2_test(void);
 void usart2_fault_putc(char c);
 

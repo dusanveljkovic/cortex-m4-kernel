@@ -15,4 +15,6 @@ void console_write_sync(const char *buf, uint32_t len);
 
 int console_read(uint8_t *buf, uint32_t len);
 
+int console_read_blocking(uint8_t *buf, uint32_t len);
+
 #endif

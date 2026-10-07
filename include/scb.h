@@ -29,7 +29,8 @@ typedef struct {
 #define SBC_CCR_DIV_0 (1 << 4)
 #define SCB_SHCSR_USG_FAULT_ENABLE (1 << 18)
 #define SCB_SHCSR_MEMFAULTENABLE (1 << 16)
-#define ICSR_PENDSV_SET (1 << 28)
+#define PENDSVSET_Pos 28
+#define ICSR_PENDSV_SET (1 << PENDSVSET_Pos)
 
 #define SYSTICK_SHPR 3
 #define PENDSV_SHPR 3
@@ -53,5 +54,8 @@ typedef struct {
 #define SCB_CFSR_MSTKERR_Msk (1 << SCB_CFSR_MSTKERR_Pos)
 #define SCB_CFSR_MMARVALID_Pos 7
 #define SCB_CFSR_MMARVALID_Msk (1 << SCB_CFSR_MMARVALID_Pos)
+
+#define SCB_PENDSV_PENDING                                                     \
+  ((SCB->ICSR & ~(1 << PENDSVSET_Pos)) >> PENDSVSET_Pos)
 
 #endif // !_SCB_H
