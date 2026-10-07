@@ -13,6 +13,8 @@ typedef enum {
   TASK_FINISHED
 } task_state_t;
 
+typedef enum { NONE, SEM, MUTEX } wait_type_t;
+
 typedef struct tcb {
   uint32_t *sp;
   task_state_t state;
@@ -31,6 +33,7 @@ typedef struct tcb {
   uint32_t wake_tick;
 
   void *waiting_on;
+  wait_type_t waiting_on_type;
 
   struct mutex *owned_mutexes;
 } tcb_t;

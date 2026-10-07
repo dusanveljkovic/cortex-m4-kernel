@@ -25,6 +25,7 @@ sem_result_t semaphore_wait(semaphore_t *sem) {
 
     task->state = TASK_BLOCKED;
     task->waiting_on = sem;
+    task->waiting_on_type = SEM;
     ((semaphore_t *)task->waiting_on)->references++;
 
     queue_push(&sem->wait_queue, task);
@@ -47,6 +48,7 @@ sem_result_t semaphore_post(semaphore_t *sem) {
     task->state = TASK_READY;
     ((semaphore_t *)task->waiting_on)->references--;
     task->waiting_on = 0;
+    task->waiting_on_type = NONE;
 
     scheduler_put_task(task);
   } else {
@@ -62,6 +64,7 @@ void semaphore_close(semaphore_t *sem) {
   tcb_t *task = queue_pop(&sem->wait_queue);
   while (task) {
     task->waiting_on = 0;
+    task->waiting_on_type = NONE;
     scheduler_put_task(task);
     task = queue_pop(&sem->wait_queue);
   }
@@ -102,6 +105,21 @@ static void mutex_queue_remove(mutex_t **head, mutex_t *m) {
   }
 }
 
+static void task_raise_priority(tcb_t *task, uint8_t prio) {
+  if (task->effective_priority <= prio)
+    return;
+
+  task->effective_priority = prio;
+  if (task->state == TASK_READY)
+    scheduler_reorder(task);
+
+  if (task->state == TASK_BLOCKED && task->waiting_on_type == MUTEX) {
+    mutex_t *w = (mutex_t *)task->waiting_on;
+    if (w->owner != 0)
+      task_raise_priority(w->owner, prio);
+  }
+}
+
 sem_result_t mutex_lock(mutex_t *m) {
   uint32_t irq_state = irq_save();
   if (m->owner == 0) {
@@ -119,17 +137,30 @@ sem_result_t mutex_lock(mutex_t *m) {
 
   task->state = TASK_BLOCKED;
   task->waiting_on = m;
+  task->waiting_on_type = MUTEX;
 
   priority_queue_push(&m->wait_queue, task);
 
-  if (task->effective_priority < m->owner->effective_priority) {
-    m->owner->effective_priority = task->effective_priority;
-    if (m->owner->state == TASK_READY)
-      scheduler_reorder(m->owner);
-  }
+  task_raise_priority(m->owner, task->effective_priority);
 
   irq_restore(irq_state);
   return SEM_OK_YIELD;
+}
+
+static void task_recompute_priority(tcb_t *task) {
+  uint8_t p = task_recalculate_priority(task);
+  if (p == task->effective_priority)
+    return;
+
+  task->effective_priority = p;
+  if (task->state == TASK_READY)
+    scheduler_reorder(task);
+
+  if (task->state == TASK_BLOCKED && task->waiting_on_type == MUTEX) {
+    mutex_t *w = (mutex_t *)task->waiting_on;
+    if (w->owner != 0)
+      task_recompute_priority(w->owner);
+  }
 }
 
 sem_result_t mutex_unlock(mutex_t *m) {
@@ -146,13 +177,11 @@ sem_result_t mutex_unlock(mutex_t *m) {
     next->waiting_on = 0;
 
     mutex_queue_push(&next->owned_mutexes, m);
-    next->effective_priority = task_recalculate_priority(next);
-    scheduler_put_task(next);
+    task_recompute_priority(next);
   }
   mutex_queue_remove(&current_task->owned_mutexes, m);
 
-  uint8_t new_priority = task_recalculate_priority(current_task);
-  current_task->effective_priority = new_priority;
+  task_recompute_priority(current_task);
 
   if (next != 0 &&
       next->effective_priority < current_task->effective_priority) {
