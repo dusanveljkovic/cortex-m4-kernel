@@ -151,6 +151,7 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
   }
   case SYS_TASK_EXIT:
     current_task->state = TASK_FINISHED;
+    mutex_unlock_all_owned(current_task->owned_mutexes);
     should_yield = 1;
     break;
   case SYS_TASK_SET_NAME: {

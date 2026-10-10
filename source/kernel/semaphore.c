@@ -17,8 +17,8 @@ sem_result_t semaphore_wait(semaphore_t *sem) {
   }
 
   if (sem->count > 0) {
-    irq_restore(irq_state);
     sem->count--;
+    irq_restore(irq_state);
     return SEM_OK;
   } else {
     tcb_t *task = current_task;
@@ -114,7 +114,10 @@ static void task_raise_priority(tcb_t *task, uint8_t prio) {
     scheduler_reorder(task);
 
   if (task->state == TASK_BLOCKED && task->waiting_on_type == MUTEX) {
+    // must reoder it inside wait_queue because its priority changed
+    // like it must be reordered inside scheduler
     mutex_t *w = (mutex_t *)task->waiting_on;
+    priority_queue_reoder(&w->wait_queue, task);
     if (w->owner != 0)
       task_raise_priority(w->owner, prio);
   }
@@ -147,22 +150,6 @@ sem_result_t mutex_lock(mutex_t *m) {
   return SEM_OK_YIELD;
 }
 
-static void task_recompute_priority(tcb_t *task) {
-  uint8_t p = task_recalculate_priority(task);
-  if (p == task->effective_priority)
-    return;
-
-  task->effective_priority = p;
-  if (task->state == TASK_READY)
-    scheduler_reorder(task);
-
-  if (task->state == TASK_BLOCKED && task->waiting_on_type == MUTEX) {
-    mutex_t *w = (mutex_t *)task->waiting_on;
-    if (w->owner != 0)
-      task_recompute_priority(w->owner);
-  }
-}
-
 sem_result_t mutex_unlock(mutex_t *m) {
   uint32_t irq_state = irq_save();
   if (m->owner != current_task) {
@@ -175,13 +162,15 @@ sem_result_t mutex_unlock(mutex_t *m) {
   if (next != 0) {
     next->state = TASK_READY;
     next->waiting_on = 0;
+    next->waiting_on_type = NONE;
 
     mutex_queue_push(&next->owned_mutexes, m);
-    task_recompute_priority(next);
+    next->effective_priority = task_recalculate_priority(next);
+    scheduler_put_task(next);
   }
   mutex_queue_remove(&current_task->owned_mutexes, m);
 
-  task_recompute_priority(current_task);
+  current_task->effective_priority = task_recalculate_priority(current_task);
 
   if (next != 0 &&
       next->effective_priority < current_task->effective_priority) {
@@ -202,4 +191,12 @@ uint32_t mutex_get_waiting(mutex_t *m) {
     tmp = tmp->next;
   }
   return count;
+}
+
+void mutex_unlock_all_owned(mutex_t *m) {
+  mutex_t *tmp = m;
+  while (tmp) {
+    mutex_unlock(tmp);
+    tmp = tmp->next_owned;
+  }
 }
