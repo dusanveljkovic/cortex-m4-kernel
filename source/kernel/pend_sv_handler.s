@@ -3,6 +3,7 @@
 .thumb
 
 .extern scheduler_select_next
+.extern scheduler_put_task
 .extern mpu_switch_to_task
 .extern task_set_privilege
 .extern current_task
@@ -13,7 +14,6 @@
 .global pend_sv_handler
 .align 2
 pend_sv_handler:
-  cpsid i
   isb 
 
   ldr r1, =current_task
@@ -23,7 +23,14 @@ pend_sv_handler:
   beq first_task
 
   mrs r0, psp
-  stmdb r0!, {r4-r11}
+
+  tst lr, #0x10
+  bne skip_vstmdb
+  vstmdb r0!, {s16-s31}
+
+skip_vstmdb:
+  stmdb r0!, {r4-r11, lr}
+
   str r0, [r1]
 
   bl scheduler_select_next
@@ -37,22 +44,21 @@ restore_task:
   ldr r1, =next_task
   ldr r2, [r1]
   str r2, [r0]
+  mov r4, r2
 
-  mov r0, r2
-  push {r2}
+  mov r0, r4
   bl mpu_switch_to_task
-  pop {r2}
 
-  mov r0, r2
-  push {r2}
+  mov r0, r4
   bl task_set_privilege
-  pop {r2}
 
-  ldr r0, [r2]
-  ldmia r0!, {r4-r11}
+  ldr r0, [r4]
+  ldmia r0!, {r4-r11, lr}
+  tst lr, #0x10
+  bne skip_vldmia
+  vldmia r0!, {s16-s31} 
 
+skip_vldmia:
   msr psp, r0
   isb
-  cpsie i
-  ldr lr, =0xFFFFFFFD
   bx lr

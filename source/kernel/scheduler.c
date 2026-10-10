@@ -26,6 +26,7 @@ void scheduler_put_task(tcb_t *task) {
   uint32_t irq_state = irq_save();
 
   task->state = TASK_READY;
+  priority_queue_remove(&ready_queue, task);
   priority_queue_push(&ready_queue, task);
 
   irq_restore(irq_state);
@@ -34,13 +35,19 @@ void scheduler_put_task(tcb_t *task) {
 // select the next task to run and get rid of all
 // finished tasks in that queue
 void scheduler_select_next(void) {
+  uint32_t irq_state = irq_save();
+
+  scheduler_put_task(current_task);
+
   if (ready_queue.head != 0) {
     next_task = priority_queue_pop(&ready_queue);
     next_task->state = TASK_RUNNING;
+    irq_restore(irq_state);
     return;
   }
 
   next_task = current_task;
+  irq_restore(irq_state);
 }
 
 // gets the next task without setting it as a running task

@@ -14,6 +14,7 @@ void queue_push(tcb_list_t *q, tcb_t *task);
 void priority_queue_push(tcb_list_t *q, tcb_t *task);
 tcb_t *priority_queue_pop(tcb_list_t *q);
 void priority_queue_reoder(tcb_list_t *t, tcb_t *task);
+void priority_queue_remove(tcb_list_t *t, tcb_t *task);
 
 void scheduler_init(void);
 void scheduler_select_next(void);

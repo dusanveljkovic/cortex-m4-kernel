@@ -55,7 +55,6 @@ typedef struct {
 #define SCB_CFSR_MMARVALID_Pos 7
 #define SCB_CFSR_MMARVALID_Msk (1 << SCB_CFSR_MMARVALID_Pos)
 
-#define SCB_PENDSV_PENDING                                                     \
-  ((SCB->ICSR & ~(1 << PENDSVSET_Pos)) >> PENDSVSET_Pos)
+#define SCB_PENDSV_PENDING ((SCB->ICSR >> PENDSVSET_Pos) & 1u)
 
 #endif // !_SCB_H

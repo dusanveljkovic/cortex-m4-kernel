@@ -1,6 +1,7 @@
 #include "../../include/cli.h"
 #include "../../include/clock.h"
 #include "../../include/console.h"
+#include "../../include/fpu.h"
 #include "../../include/heap.h"
 #include "../../include/kprintf.h"
 #include "../../include/mpu.h"
@@ -24,8 +25,20 @@ void idle_func(void *a) {
     ;
 }
 
+void fpu_init(void) {
+  // enable coprocessor access
+  CPACR |= (CPACR_CP_FULL_ACCESS << CPACR_CP_Pos(10));
+  CPACR |= (CPACR_CP_FULL_ACCESS << CPACR_CP_Pos(11));
+  __DSB();
+  __ISB();
+
+  // enable fpu state preservation and lazy stacking
+  FPCCR |= (1 << FPCCR_LSPEN_Pos) | (1 << FPCCR_ASPEN_Pos);
+}
+
 void create_tasks(void);
 int main() {
+  fpu_init();
   clock_init();
   driver_register(&usart2_driver);
   console_attach(driver_find("usart2"));
@@ -33,7 +46,7 @@ int main() {
   static_memory_init();
   heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
   scheduler_init();
-  mpu_init();
+  // mpu_init();
 
   NVIC_SET_PRIORITY(USART2_IRQ, 0xC0);
   SCB_SET_PRIORITY(SVCALL_SHPR, SVCALL_PRIORITY_POS, 0xD0);

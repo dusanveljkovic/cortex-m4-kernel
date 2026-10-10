@@ -30,6 +30,7 @@ source/kernel/kprintf.c \
 source/kernel/driver.c \
 source/user/user_main.c \
 source/user/uprintf.c \
+source/user/fpu_test.c \
 source/drivers/spi.c \
 source/drivers/usart.c \
 source/drivers/usart_driver.c \
@@ -51,7 +52,7 @@ AS = arm-none-eabi-gcc -c -x assembler
 LD = arm-none-eabi-ld 
 HX = arm-none-eabi-objcopy -O ihex
 
-MCU = -mcpu=cortex-m4 -mthumb
+MCU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 
 FLAGS_DEBUG = -g3 -O0 -fdebug-prefix-map=$(CURDIR)=.
 

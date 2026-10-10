@@ -28,6 +28,10 @@ task_stack_init:
   mov r5, r1
   push {r5} // R0: function to call
 
+  mov r5, 0xFFFD
+  movt r5, 0xFFFF
+  push {r5}
+
   mov r5, #0x11111111
   push {r5} // R11
   mov r5, #0x10101010
@@ -44,6 +48,7 @@ task_stack_init:
   push {r5} // R5
   mov r5, #0x04040404
   push {r5} // R4
+
 
   mov r0, sp
   bx lr

@@ -1,5 +1,6 @@
 #include "../../include/semaphore.h"
 #include "../../include/syscall.h"
+#include "fpu_test.h"
 #include "uprintf.h"
 #include <stdint.h>
 
@@ -86,21 +87,26 @@ void low_task(void *arg) {
 }
 
 void user_main(void *arg) {
-  semaphore_t *sem1 = sys_sem_create(0);
-  semaphore_t *sem2 = sys_sem_create(0);
-  mutex_t *m1 = sys_mutex_create();
-  wrapper_t *parg1 = sys_malloc(sizeof(wrapper_t));
-  parg1->number = 1;
-  parg1->sem1 = sem1;
-  parg1->sem2 = sem2;
-  parg1->m = m1;
+  // semaphore_t *sem1 = sys_sem_create(0);
+  // semaphore_t *sem2 = sys_sem_create(0);
+  // mutex_t *m1 = sys_mutex_create();
+  // wrapper_t *parg1 = sys_malloc(sizeof(wrapper_t));
+  // parg1->number = 1;
+  // parg1->sem1 = sem1;
+  // parg1->sem2 = sem2;
+  // parg1->m = m1;
   uprintf("[user] user task\r\n");
-  tcb_t *t3 = sys_task_create(1, low_task, parg1);
-  sys_task_set_name(t3, "low task");
+  // tcb_t *t3 = sys_task_create(1, low_task, parg1);
+  // sys_task_set_name(t3, "low task");
+  // float x1 = 0.222;
+  // float x2 = 0.333;
+  // float x3 = x1 + x2;
 
   // *((uint32_t *)0x20000c00) = 1;
   // *((uint32_t *)0x20001000) = 1;
   // *((uint32_t *)0x20001004) = 1;
   // *((uint32_t *)0x20001008) = 1;
   // *((uint32_t *)0x2000100C) = 1;
+  uprintf("[user] testing FPU");
+  fpu_test_start();
 }

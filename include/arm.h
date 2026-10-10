@@ -19,6 +19,12 @@ static inline void irq_restore(uint32_t primask) {
 }
 void request_context_switch(void);
 
+static inline uint32_t get_IPSR() {
+  uint32_t ipsr;
+  asm volatile("mrs %0, ipsr" : "=r"(ipsr) : : "memory");
+  return ipsr;
+}
+
 #define __DSB() asm volatile("dsb");
 #define __ISB() asm volatile("isb");
 #define __SET_CONTROL(control)                                                 \
