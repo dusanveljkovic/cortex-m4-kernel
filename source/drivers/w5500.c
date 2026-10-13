@@ -12,43 +12,37 @@
 #define W5500_CTRL_RWB_WRITE (1 << 2)
 #define W5500_CTRL_OM_VDM (0b00 << 0)
 
-static void w5500_write(uint16_t addr, uint8_t bsb, const uint8_t *data,
-                        uint16_t len) {
-  uint8_t control = (bsb << 3) | W5500_CTRL_RWB_WRITE | W5500_CTRL_OM_VDM;
+static void w5500_transfer(uint16_t addr, uint8_t bsb, spi1_frame_t *frame) {
+  uint8_t control =
+      (bsb << 3) | W5500_CTRL_OM_VDM |
+      (frame->rx_data != 0 ? W5500_CTRL_RWB_READ : W5500_CTRL_RWB_WRITE);
+  uint8_t header[3] = {(addr >> 8) & 0xFF, addr & 0xFF, control};
 
-  spi1_cs_select();
-  spi1_transfer((addr >> 8) & 0xFF);
-  spi1_transfer(addr & 0xFF);
-  spi1_transfer(control);
-  spi1_write(data, len);
-  spi1_cs_deselect();
-}
+  spi1_frame_t my_frame = {.header = header,
+                           .header_len = 3,
+                           .tx_data = frame->tx_data,
+                           .rx_data = frame->rx_data,
+                           .data_len = frame->data_len};
 
-static void w5500_read(uint16_t addr, uint8_t bsb, uint8_t *data,
-                       uint16_t len) {
-  uint8_t control = (bsb << 3) | W5500_CTRL_RWB_READ | W5500_CTRL_OM_VDM;
-
-  spi1_cs_select();
-  spi1_transfer((addr >> 8) & 0xFF);
-  spi1_transfer(addr & 0xFF);
-  spi1_transfer(control);
-  spi1_read(data, len);
-  spi1_cs_deselect();
+  spi1_transfer_frame(&my_frame);
 }
 
 static uint8_t w5500_read8(uint16_t addr, uint8_t bsb) {
   uint8_t v;
-  w5500_read(addr, bsb, &v, 1);
+  spi1_frame_t frame = {.rx_data = &v, .data_len = 1};
+  w5500_transfer(addr, bsb, &frame);
   return v;
 }
 
 static void w5500_write8(uint16_t addr, uint8_t bsb, uint8_t v) {
-  w5500_write(addr, bsb, &v, 1);
+  spi1_frame_t frame = {.tx_data = &v, .data_len = 1};
+  w5500_transfer(addr, bsb, &frame);
 }
 
 static uint16_t w5500_read16(uint16_t addr, uint8_t bsb) {
   uint8_t v[2];
-  w5500_read(addr, bsb, v, 2);
+  spi1_frame_t frame = {.rx_data = v, .data_len = 2};
+  w5500_transfer(addr, bsb, &frame);
   return ((uint16_t)v[0] << 8) | v[1];
 }
 
@@ -65,7 +59,8 @@ static void w5500_write16(uint16_t addr, uint8_t bsb, uint16_t data) {
   uint8_t v[2];
   v[0] = (uint8_t)(data >> 8);
   v[1] = (uint8_t)(data & 0x00FF);
-  w5500_write(addr, bsb, v, 2);
+  spi1_frame_t frame = {.tx_data = v, .data_len = 2};
+  w5500_transfer(addr, bsb, &frame);
 }
 
 static void w5500_reset_pin_init(void) {
@@ -85,14 +80,17 @@ static void w5500_hw_reset(void) {
 
 void w5500_init(const uint8_t mac[6], const uint8_t ip[4],
                 const uint8_t gateway[4], const uint8_t subnet[4]) {
-  spi1_init();
   w5500_reset_pin_init();
   w5500_hw_reset();
 
-  w5500_write(W5500_SHAR, W5500_BSB_COMMON, mac, 6);
-  w5500_write(W5500_SIPR, W5500_BSB_COMMON, ip, 4);
-  w5500_write(W5500_GAR, W5500_BSB_COMMON, gateway, 4);
-  w5500_write(W5500_SUBR, W5500_BSB_COMMON, subnet, 4);
+  spi1_frame_t mac_frame = {.tx_data = mac, .data_len = 6};
+  spi1_frame_t ip_frame = {.tx_data = ip, .data_len = 4};
+  spi1_frame_t gateway_frame = {.tx_data = gateway, .data_len = 4};
+  spi1_frame_t subnet_frame = {.tx_data = subnet, .data_len = 4};
+  w5500_transfer(W5500_SHAR, W5500_BSB_COMMON, &mac_frame);
+  w5500_transfer(W5500_SIPR, W5500_BSB_COMMON, &ip_frame);
+  w5500_transfer(W5500_GAR, W5500_BSB_COMMON, &gateway_frame);
+  w5500_transfer(W5500_SUBR, W5500_BSB_COMMON, &subnet_frame);
 }
 
 uint8_t w5500_get_version(void) {

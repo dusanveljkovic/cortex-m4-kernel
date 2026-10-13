@@ -26,13 +26,22 @@ typedef struct {
 #define SPI_SR_RXNE (1 << 0)
 #define SPI_SR_TXE (1 << 1)
 
-void spi1_cs_select(void);
-void spi1_cs_deselect(void);
+#define SPI1_PIN_CS 4
+#define SPI1_PIN_SCK 5
+#define SPI1_PIN_MISO 6
+#define SPI1_PIN_MOSI 7
+#define SPI1_AF 5
+
+typedef struct {
+  const uint8_t *header;
+  uint8_t header_len;
+
+  const uint8_t *tx_data;
+  uint8_t *rx_data;
+  uint32_t data_len;
+} spi1_frame_t;
 
 void spi1_init(void);
-uint8_t spi1_transfer(uint8_t data);
-void spi1_write(const uint8_t *data, uint32_t len);
-void spi1_read(uint8_t *data, uint32_t len);
-void spi1_transfer_buffer(const uint8_t *tx, uint8_t *rx, uint32_t len);
+void spi1_transfer_frame(spi1_frame_t *frame);
 
 #endif
