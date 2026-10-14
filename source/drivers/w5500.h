@@ -1,6 +1,7 @@
 #ifndef _W5500_H_
 #define _W5500_H_
 
+#include "spi.h"
 #include "stdbool.h"
 #include "stdint.h"
 
@@ -20,7 +21,7 @@ typedef struct {
 
 void w5500_init(const uint8_t mac[6], const uint8_t ip[4],
                 const uint8_t gateway[4], const uint8_t subnet[4]);
-uint8_t w5500_get_version(void);
-bool w5500_link_up(void);
+spi_return_t w5500_get_version(uint8_t *data);
+spi_return_t w5500_link_up(bool *up);
 
 #endif

@@ -1,6 +1,7 @@
 #ifndef _SPI_H
 #define _SPI_H
 
+#include "stdbool.h"
 #include "stdint.h"
 
 typedef struct {
@@ -39,9 +40,13 @@ typedef struct {
   const uint8_t *tx_data;
   uint8_t *rx_data;
   uint32_t data_len;
+
+  bool is_read;
 } spi1_frame_t;
 
+typedef enum { SPI_OK, SPI_ERR_TXE, SPI_ERR_RXE } spi_return_t;
+
 void spi1_init(void);
-void spi1_transfer_frame(spi1_frame_t *frame);
+spi_return_t spi1_transfer_frame(spi1_frame_t *frame);
 
 #endif

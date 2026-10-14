@@ -13,6 +13,7 @@
 #include "../../include/tcb.h"
 #include "../drivers/spi.h"
 #include "../drivers/usart.h"
+#include "../drivers/w5500.h"
 
 static uint32_t data = 0;
 
@@ -36,12 +37,21 @@ void fpu_init(void) {
   FPCCR |= (1 << FPCCR_LSPEN_Pos) | (1 << FPCCR_ASPEN_Pos);
 }
 
-void create_tasks(void);
+void w5500_start(void *a) {
+  const uint8_t mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  const uint8_t ip[4] = {192, 168, 0, 105};
+  const uint8_t gateway[4] = {192, 168, 0, 1};
+  const uint8_t subnet[4] = {255, 255, 255, 0};
+  w5500_init(mac, ip, gateway, subnet);
+}
+
 int main() {
   fpu_init();
   clock_init();
   driver_register(&usart2_driver);
   console_attach(driver_find("usart2"));
+
+  spi1_init();
 
   static_memory_init();
   heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
@@ -63,13 +73,17 @@ int main() {
   idle_task->name = "IDLE";
   tcb_t *user_task = create_task(1, user_main, 0);
   user_task->name = "user";
+  tcb_t *w5500_bring_up = create_task(0, w5500_start, 0);
+  w5500_bring_up->name = "w5500 bring up";
+  w5500_bring_up->unprivileged = 0;
 
-  kprintf("[boot] Initializing tasks: %s, %s, %s\r\n", cli->name,
-          idle_task->name, user_task->name);
+  kprintf("[boot] Initializing tasks: %s, %s, %s, %s\r\n", cli->name,
+          idle_task->name, user_task->name, w5500_bring_up->name);
 
   scheduler_put_task(user_task);
   scheduler_put_task(idle_task);
   scheduler_put_task(cli);
+  scheduler_put_task(w5500_bring_up);
 
   systick_init();
 

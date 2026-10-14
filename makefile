@@ -34,6 +34,7 @@ source/user/fpu_test.c \
 source/drivers/spi.c \
 source/drivers/usart.c \
 source/drivers/usart_driver.c \
+source/drivers/w5500.c \
 source/utils.c
 
 FLAGS_INCLUDE = \

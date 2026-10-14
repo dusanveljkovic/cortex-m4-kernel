@@ -1,15 +1,23 @@
 #include "spi.h"
 #include "../../include/gpio.h"
+#include "../../include/kprintf.h"
 #include "../../include/rcc.h"
 #include "../../include/semaphore.h"
 #include "../../include/syscall.h"
+
+#define TRANSFER_TIMEOUT 100000
 
 static void spi1_cs_select(void) { GPIO_PIN_LOW(GPIOA, SPI1_PIN_CS); }
 static void spi1_cs_deselect(void) { GPIO_PIN_HIGH(GPIOA, SPI1_PIN_CS); }
 
 static mutex_t spi1_lock = {0, 0, 0, 0};
+static bool initialized = false;
 
 void spi1_init(void) {
+  if (initialized) {
+    kpanicf("[!][spi1] already initialized\n");
+    return;
+  }
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
   RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
@@ -36,36 +44,57 @@ void spi1_init(void) {
   SPI1->CR1 |= SPI_CR1_SPE;
 
   mutex_init(&spi1_lock);
+  initialized = true;
+  kpanicf("[spi1] successfully initialized\n");
 }
 
-static uint8_t spi1_transfer(uint8_t data) {
-  while (!(SPI1->SR & SPI_SR_TXE))
-    ;
+static spi_return_t spi1_transfer(uint8_t data, uint8_t *received) {
+  uint32_t i = 0;
+  while (!(SPI1->SR & SPI_SR_TXE)) {
+    if (++i >= TRANSFER_TIMEOUT)
+      return SPI_ERR_TXE;
+  }
+  i = 0;
 
   SPI1->DR = data;
 
-  while (!(SPI1->SR & SPI_SR_RXNE))
-    ;
+  while (!(SPI1->SR & SPI_SR_RXNE)) {
+    if (++i >= TRANSFER_TIMEOUT)
+      return SPI_ERR_RXE;
+  }
 
-  return (uint8_t)SPI1->DR;
+  if (received != 0)
+    *received = (uint8_t)SPI1->DR;
+  return SPI_OK;
 }
 
-void spi1_transfer_frame(spi1_frame_t *frame) {
-  sys_mutex_lock(&spi1_lock);
+spi_return_t spi1_transfer_frame(spi1_frame_t *frame) {
+  spi_return_t transfer_ret = SPI_OK;
 
+  sys_mutex_lock(&spi1_lock);
   spi1_cs_select();
 
   for (uint32_t i = 0; i < frame->header_len; i++) {
-    spi1_transfer(frame->header[i]);
+    transfer_ret = spi1_transfer(frame->header[i], 0);
+    if (transfer_ret != SPI_OK)
+      break;
   }
 
-  for (uint32_t i = 0; i < frame->data_len; i++) {
-    uint8_t received = spi1_transfer(frame->tx_data ? frame->tx_data[i] : 0xFF);
-    if (frame->rx_data)
-      frame->rx_data[i] = received;
+  if (transfer_ret == SPI_OK) {
+    for (uint32_t i = 0; i < frame->data_len; i++) {
+      uint8_t received;
+      transfer_ret =
+          spi1_transfer(frame->is_read ? 0xFF : frame->tx_data[i], &received);
+      if (transfer_ret != SPI_OK)
+        break;
+
+      if (frame->is_read && frame->rx_data)
+        frame->rx_data[i] = received;
+    }
   }
 
   spi1_cs_deselect();
-
   sys_mutex_unlock(&spi1_lock);
+
+  return transfer_ret;
 }

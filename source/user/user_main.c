@@ -107,6 +107,6 @@ void user_main(void *arg) {
   // *((uint32_t *)0x20001004) = 1;
   // *((uint32_t *)0x20001008) = 1;
   // *((uint32_t *)0x2000100C) = 1;
-  uprintf("[user] testing FPU");
-  fpu_test_start();
+  // uprintf("[user] testing FPU");
+  // fpu_test_start();
 }
