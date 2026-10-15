@@ -5,8 +5,9 @@
 #include "../../include/scheduler.h"
 #include "../../include/semaphore.h"
 #include "../../include/sleep.h"
+#include "../../include/static_memory.h"
 #include "../../include/tcb.h"
-#include "stdint.h"
+#include "../drivers/w5500.h"
 #include <stdint.h>
 
 void *syscall(uint32_t number, uintptr_t arg2, uintptr_t arg3, uintptr_t arg4) {
@@ -66,6 +67,34 @@ inline int sys_console_write(const char *buf, uint32_t len) {
                                  (uintptr_t)len, 0);
 }
 
+inline int sys_net_link() {
+  return (int)(uintptr_t)syscall(SYS_NET_LINK, 0, 0, 0);
+}
+
+extern uint8_t _heap_start;
+extern uint8_t _heap_end;
+
+bool ptr_on_heap(uintptr_t ptr, uint32_t len, bool write) {
+  if (ptr == 0 || ptr < (uintptr_t)&_heap_start ||
+      (ptr + len) >= (uintptr_t)&_heap_end)
+    return false;
+  // overflow
+  if (ptr + len < ptr)
+    return false;
+  return true;
+}
+
+bool ptr_on_stack(uintptr_t ptr, uint32_t len, bool write,
+                  volatile tcb_t *task) {
+  if (ptr == 0 || ptr < (uintptr_t)task->stack_base ||
+      (ptr + len) >= (uintptr_t)(task->stack_base + task->stack_size))
+    return false;
+  // overflow
+  if (ptr + len < ptr)
+    return false;
+  return true;
+}
+
 void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
                   uintptr_t arg4) {
   uint32_t syscall_number = *(uint32_t *)arg1;
@@ -85,17 +114,20 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     break;
   }
   case SYS_FREE: {
-    kfree((void *)arg2);
+    if (ptr_on_heap(arg2, 0, 0))
+      kfree((void *)arg2);
     break;
   }
   case SYS_SEM_CREATE: {
     uint32_t count = (uint32_t)arg2;
-    ret = (uint32_t *)kmalloc(sizeof(semaphore_t));
+    ret = (uint32_t *)alloc_sem();
     if (ret != 0)
       semaphore_init((semaphore_t *)ret, count);
     break;
   }
   case SYS_SEM_WAIT: {
+    if (!validate_sem(arg2))
+      break;
     semaphore_t *sem = (semaphore_t *)arg2;
     sem_result_t result = semaphore_wait(sem);
     if (result == SEM_OK_YIELD)
@@ -104,6 +136,8 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     break;
   }
   case SYS_SEM_POST: {
+    if (!validate_sem(arg2))
+      break;
     semaphore_t *sem = (semaphore_t *)arg2;
     sem_result_t result = semaphore_post(sem);
     if (result == SEM_OK_YIELD)
@@ -112,9 +146,11 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     break;
   }
   case SYS_SEM_CLOSE: {
+    if (!validate_sem(arg2))
+      break;
     semaphore_t *sem = (semaphore_t *)arg2;
     semaphore_close(sem);
-    kfree(sem);
+    free_sem(sem);
     break;
   }
 
@@ -125,6 +161,8 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     break;
   }
   case SYS_MUTEX_LOCK: {
+    if (!validate_mutex(arg2))
+      break;
     mutex_t *m = (mutex_t *)arg2;
     sem_result_t result = mutex_lock(m);
     if (result == SEM_OK_YIELD)
@@ -133,6 +171,8 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     break;
   }
   case SYS_MUTEX_UNLOCK: {
+    if (!validate_mutex(arg2))
+      break;
     mutex_t *m = (mutex_t *)arg2;
     sem_result_t result = mutex_unlock(m);
     if (result == SEM_OK_YIELD)
@@ -155,6 +195,8 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
     should_yield = 1;
     break;
   case SYS_TASK_SET_NAME: {
+    if (!validate_task(arg2))
+      break;
     tcb_t *task = (tcb_t *)arg2;
     if (task != 0)
       task->name = (char *)arg3;
@@ -176,8 +218,18 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
   }
   case SYS_CONSOLE_WRITE: {
     uint32_t len = (uint32_t)arg3;
+    if (!ptr_on_heap(arg2, len, false) ||
+        !ptr_on_stack(arg2, len, false, current_task))
+      break;
     console_write((const char *)arg2, len);
     ret = (uint32_t *)(uintptr_t)len;
+    break;
+  }
+
+  case SYS_NET_LINK: {
+    int up = 0;
+    w5500_link_up(&up);
+    ret = (uint32_t *)(uintptr_t)up;
     break;
   }
   }

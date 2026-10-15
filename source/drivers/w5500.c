@@ -126,11 +126,13 @@ spi_return_t w5500_get_version(uint8_t *data) {
   return w5500_read8(W5500_VERSIONR, W5500_BSB_COMMON, data);
 }
 
-spi_return_t w5500_link_up(bool *up) {
+spi_return_t w5500_link_up(int *up) {
   uint8_t data = 0;
-  spi_return_t ret =
-      w5500_read8(W5500_PHYCFGR, W5500_BSB_COMMON, &data); // & 0x01) != 0;
+  spi_return_t ret = w5500_read8(W5500_PHYCFGR, W5500_BSB_COMMON, &data);
   if (ret == SPI_OK)
-    *up = (data & 0x01) != 0;
+    *up = data;
+  else
+    *up = -1;
+
   return ret;
 }

@@ -22,6 +22,6 @@ typedef struct {
 void w5500_init(const uint8_t mac[6], const uint8_t ip[4],
                 const uint8_t gateway[4], const uint8_t subnet[4]);
 spi_return_t w5500_get_version(uint8_t *data);
-spi_return_t w5500_link_up(bool *up);
+spi_return_t w5500_link_up(int *up);
 
 #endif

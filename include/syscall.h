@@ -31,6 +31,8 @@ enum {
   SYS_PUTC,
   SYS_GETC,
   SYS_CONSOLE_WRITE,
+
+  SYS_NET_LINK,
 };
 
 void sys_yield(void);
@@ -58,6 +60,8 @@ void sys_sleep(uint32_t ticks);
 void sys_putc(char c);
 bool sys_getc(char *c);
 int sys_console_write(const char *buf, uint32_t len);
+
+int sys_net_link(void);
 
 void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
                   uintptr_t arg4);

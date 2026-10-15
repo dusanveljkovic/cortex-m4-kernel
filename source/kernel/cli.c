@@ -5,6 +5,7 @@
 #include "../../include/kprintf.h"
 #include "../../include/scb.h"
 #include "../../include/static_memory.h"
+#include "../../include/syscall.h"
 #include "../../include/utils.h"
 #include "stdint.h"
 
@@ -30,6 +31,9 @@ void cli_cmd_uptime(int argc, char **argv);
 void cli_cmd_mem(int argc, char **argv);
 void cli_cmd_heap(int argc, char **argv);
 void cli_cmd_mutex(int argc, char **argv);
+
+void cli_cmd_link(int argc, char **argv);
+
 void cli_cmd_reboot(int argc, char **argv);
 
 static const cli_command_t commands[] = {
@@ -39,6 +43,7 @@ static const cli_command_t commands[] = {
     {"mem", "Print memory usage", cli_cmd_mem},
     {"heap", "Print heap usage", cli_cmd_heap},
     {"mutex", "Print mutex owners/waiters", cli_cmd_mutex},
+    {"link", "Print w5500 link status", cli_cmd_link},
     {"reboot", "Reboot the MCU", cli_cmd_reboot},
 };
 
@@ -210,6 +215,11 @@ void cli_cmd_mutex(int argc, char **argv) {
       tmp_m = tmp_m->next_owned;
     }
   }
+}
+
+void cli_cmd_link(int argc, char **argv) {
+  int status = sys_net_link();
+  kprintf("Link status: %d\r\n", status);
 }
 
 __attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {

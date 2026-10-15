@@ -46,6 +46,9 @@ void w5500_start(void *a) {
 }
 
 int main() {
+  static_memory_init();
+  heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
+
   fpu_init();
   clock_init();
   driver_register(&usart2_driver);
@@ -53,10 +56,8 @@ int main() {
 
   spi1_init();
 
-  static_memory_init();
-  heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
   scheduler_init();
-  // mpu_init();
+  mpu_init();
 
   NVIC_SET_PRIORITY(USART2_IRQ, 0xC0);
   SCB_SET_PRIORITY(SVCALL_SHPR, SVCALL_PRIORITY_POS, 0xD0);
