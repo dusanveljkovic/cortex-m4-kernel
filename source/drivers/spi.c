@@ -15,7 +15,7 @@ static bool initialized = false;
 
 void spi1_init(void) {
   if (initialized) {
-    kpanicf("[!][spi1] already initialized\n");
+    kpanicf("[!][spi1] already initialized\r\n");
     return;
   }
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
@@ -45,7 +45,7 @@ void spi1_init(void) {
 
   mutex_init(&spi1_lock);
   initialized = true;
-  kpanicf("[spi1] successfully initialized\n");
+  kpanicf("[spi1] successfully initialized\r\n");
 }
 
 static spi_return_t spi1_transfer(uint8_t data, uint8_t *received) {

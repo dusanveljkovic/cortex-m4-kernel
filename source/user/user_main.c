@@ -86,6 +86,22 @@ void low_task(void *arg) {
   }
 }
 
+void net_test(void) {
+  uprintf("[user] net test\r\n");
+  int32_t link = -1;
+  while (true) {
+    sys_net_link(&link);
+    uprintf("[user] link status %d\r\n", link);
+    sys_sleep(1000);
+    if (link == 1)
+      break;
+  }
+  socket_t *socket = sys_socket_get(0);
+  socket->protocol = UDP;
+  socket->port = 67;
+  sys_socket_open(socket);
+}
+
 void user_main(void *arg) {
   // semaphore_t *sem1 = sys_sem_create(0);
   // semaphore_t *sem2 = sys_sem_create(0);
@@ -109,4 +125,5 @@ void user_main(void *arg) {
   // *((uint32_t *)0x2000100C) = 1;
   // uprintf("[user] testing FPU");
   // fpu_test_start();
+  net_test();
 }

@@ -1,6 +1,7 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
+#include "../source/drivers/w5500.h"
 #include "semaphore.h"
 #include "stdbool.h"
 #include "stdint.h"
@@ -32,6 +33,8 @@ enum {
   SYS_GETC,
   SYS_CONSOLE_WRITE,
 
+  SYS_SOCKET_GET,
+  SYS_SOCKET_OPEN,
   SYS_NET_LINK,
 };
 
@@ -61,7 +64,9 @@ void sys_putc(char c);
 bool sys_getc(char *c);
 int sys_console_write(const char *buf, uint32_t len);
 
-int sys_net_link(void);
+socket_t *sys_socket_get(uint8_t n);
+socket_t *sys_socket_open(socket_t *socket);
+void sys_net_link(int32_t *up);
 
 void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
                   uintptr_t arg4);

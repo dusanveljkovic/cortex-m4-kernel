@@ -2,6 +2,7 @@
 #include "../../include/arm.h"
 #include "../../include/console.h"
 #include "../../include/heap.h"
+#include "../../include/net.h"
 #include "../../include/scheduler.h"
 #include "../../include/semaphore.h"
 #include "../../include/sleep.h"
@@ -67,8 +68,15 @@ inline int sys_console_write(const char *buf, uint32_t len) {
                                  (uintptr_t)len, 0);
 }
 
-inline int sys_net_link() {
-  return (int)(uintptr_t)syscall(SYS_NET_LINK, 0, 0, 0);
+inline void sys_net_link(int32_t *up) {
+  syscall(SYS_NET_LINK, (uintptr_t)up, 0, 0);
+}
+
+inline socket_t *sys_socket_get(uint8_t n) {
+  return (socket_t *)syscall(SYS_SOCKET_GET, n, 0, 0);
+}
+inline socket_t *sys_socket_open(socket_t *socket) {
+  return (socket_t *)syscall(SYS_SOCKET_OPEN, (uintptr_t)socket, 0, 0);
 }
 
 extern uint8_t _heap_start;
@@ -218,7 +226,7 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
   }
   case SYS_CONSOLE_WRITE: {
     uint32_t len = (uint32_t)arg3;
-    if (!ptr_on_heap(arg2, len, false) ||
+    if (!ptr_on_heap(arg2, len, false) &&
         !ptr_on_stack(arg2, len, false, current_task))
       break;
     console_write((const char *)arg2, len);
@@ -227,9 +235,32 @@ void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
   }
 
   case SYS_NET_LINK: {
-    int up = 0;
-    w5500_link_up(&up);
-    ret = (uint32_t *)(uintptr_t)up;
+    net_request_t req = {.op = NET_OP_LINK,
+                         .caller = current_task,
+                         .socket = 0,
+                         .result = (int32_t *)arg2};
+    net_send_request(&req);
+    if (net_will_wait())
+      should_yield = 1;
+    break;
+  }
+
+  case SYS_SOCKET_GET: {
+    socket_t *socket = get_socket((uint8_t)arg2);
+    ret = (uint32_t *)(uintptr_t)socket;
+    break;
+  }
+  case SYS_SOCKET_OPEN: {
+    if (!validate_socket(arg2))
+      break;
+    socket_t *socket = (socket_t *)arg2;
+    net_request_t req = {.op = NET_OP_SOCKET_OPEN,
+                         .caller = current_task,
+                         .socket = socket,
+                         .result = 0};
+    net_send_request(&req);
+    if (net_will_wait())
+      should_yield = 1;
     break;
   }
   }

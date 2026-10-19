@@ -5,6 +5,7 @@
 #include "../../include/heap.h"
 #include "../../include/kprintf.h"
 #include "../../include/mpu.h"
+#include "../../include/net.h"
 #include "../../include/nvic.h"
 #include "../../include/scb.h"
 #include "../../include/scheduler.h"
@@ -13,7 +14,6 @@
 #include "../../include/tcb.h"
 #include "../drivers/spi.h"
 #include "../drivers/usart.h"
-#include "../drivers/w5500.h"
 
 static uint32_t data = 0;
 
@@ -37,14 +37,6 @@ void fpu_init(void) {
   FPCCR |= (1 << FPCCR_LSPEN_Pos) | (1 << FPCCR_ASPEN_Pos);
 }
 
-void w5500_start(void *a) {
-  const uint8_t mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  const uint8_t ip[4] = {192, 168, 0, 105};
-  const uint8_t gateway[4] = {192, 168, 0, 1};
-  const uint8_t subnet[4] = {255, 255, 255, 0};
-  w5500_init(mac, ip, gateway, subnet);
-}
-
 int main() {
   static_memory_init();
   heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
@@ -57,7 +49,7 @@ int main() {
   spi1_init();
 
   scheduler_init();
-  mpu_init();
+  // mpu_init();
 
   NVIC_SET_PRIORITY(USART2_IRQ, 0xC0);
   SCB_SET_PRIORITY(SVCALL_SHPR, SVCALL_PRIORITY_POS, 0xD0);
@@ -74,17 +66,17 @@ int main() {
   idle_task->name = "IDLE";
   tcb_t *user_task = create_task(1, user_main, 0);
   user_task->name = "user";
-  tcb_t *w5500_bring_up = create_task(0, w5500_start, 0);
-  w5500_bring_up->name = "w5500 bring up";
-  w5500_bring_up->unprivileged = 0;
+  tcb_t *net_t = create_task(0, net_task, 0);
+  net_t->name = "net task";
+  net_t->unprivileged = 0;
 
   kprintf("[boot] Initializing tasks: %s, %s, %s, %s\r\n", cli->name,
-          idle_task->name, user_task->name, w5500_bring_up->name);
+          idle_task->name, user_task->name, net_t->name);
 
   scheduler_put_task(user_task);
   scheduler_put_task(idle_task);
   scheduler_put_task(cli);
-  scheduler_put_task(w5500_bring_up);
+  scheduler_put_task(net_t);
 
   systick_init();
 

@@ -218,7 +218,8 @@ void cli_cmd_mutex(int argc, char **argv) {
 }
 
 void cli_cmd_link(int argc, char **argv) {
-  int status = sys_net_link();
+  int32_t status = -1;
+  sys_net_link(&status);
   kprintf("Link status: %d\r\n", status);
 }
 

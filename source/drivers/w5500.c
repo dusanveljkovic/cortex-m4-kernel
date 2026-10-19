@@ -130,9 +130,66 @@ spi_return_t w5500_link_up(int *up) {
   uint8_t data = 0;
   spi_return_t ret = w5500_read8(W5500_PHYCFGR, W5500_BSB_COMMON, &data);
   if (ret == SPI_OK)
-    *up = data;
+    *up = (data & (0x01));
   else
     *up = -1;
 
   return ret;
+}
+
+#define OPEN_MAX_TRIES 5
+
+void w5500_socket_open(socket_t *socket) {
+  if (socket->number > 7) {
+    socket->status = ERROR;
+    return;
+  }
+  uint8_t mode = 0;
+  mode |= socket->protocol;
+  w5500_write8(SOCKET_MR, W5500_BSB_SOCK_REG(socket->number), mode);
+  w5500_write16(SOCKET_PORT, W5500_BSB_SOCK_REG(socket->number), socket->port);
+
+  w5500_write8(SOCKET_CR, W5500_BSB_SOCK_REG(socket->number), SOCKET_CMD_OPEN);
+
+  uint8_t wanted_sr = 0;
+  if (socket->protocol == TCP) {
+    wanted_sr = SOCKET_SR_INIT;
+  } else if (socket->protocol == UDP) {
+    wanted_sr = SOCKET_SR_UDP;
+  }
+
+  uint8_t current_sr = 0;
+  uint8_t tries = 0;
+  do {
+    sys_sleep(2);
+    w5500_read8(SOCKET_SR, W5500_BSB_SOCK_REG(socket->number), &current_sr);
+  } while (wanted_sr != current_sr && ++tries < OPEN_MAX_TRIES);
+
+  if (tries == OPEN_MAX_TRIES) {
+    kpanicf("[!][w5500] couldn't open socket %d, protocol %d\r\n",
+            socket->number, socket->protocol);
+    socket->status = ERROR;
+    return;
+  }
+
+  uint8_t current_mr = 0;
+  uint16_t current_port = 0;
+  w5500_read8(SOCKET_MR, W5500_BSB_SOCK_REG(socket->number), &current_mr);
+  w5500_read16(SOCKET_PORT, W5500_BSB_SOCK_REG(socket->number), &current_port);
+
+  if (current_mr != mode) {
+    kpanicf("[!][w5500] mr mismatch %d != %d\r\n", current_mr, mode);
+    socket->status = ERROR;
+    return;
+  }
+  if (current_port != socket->port) {
+    kpanicf("[!][w5500] port mismatch %d != %d\r\n", current_port,
+            socket->port);
+    socket->status = ERROR;
+    return;
+  }
+
+  socket->status = OPEN;
+
+  return;
 }

@@ -1,13 +1,16 @@
 #include "../../include/static_memory.h"
 #include "../../include/arm.h"
 #include "../../include/tcb.h"
+#include "../drivers/w5500.h"
 #include "stdint.h"
 #include <semaphore.h>
 
 #define N_SEMAPHORES 64
 #define N_MUTEXES 64
+#define N_SOCKETS 8
 static semaphore_t sem_slots[N_SEMAPHORES];
 static mutex_t mutex_slots[N_MUTEXES];
+static socket_t socket_slots[N_SOCKETS];
 
 static tcb_t task_slots[N_TASKS];
 __attribute__((aligned(
@@ -100,6 +103,21 @@ mutex_t *alloc_mutex(void) {
   return 0;
 }
 
+static void socket_memory_init(void) {
+  for (int i = 0; i < N_SOCKETS; i++) {
+    socket_slots[i].status = CREATED;
+    socket_slots[i].number = i;
+    socket_slots[i].port = 0;
+    socket_slots[i].protocol = CLOSED;
+  }
+}
+
+socket_t *get_socket(uint8_t n) {
+  if (n > N_SOCKETS)
+    return 0;
+  return &socket_slots[n];
+}
+
 bool validate_task(uintptr_t ptr) {
   return (((uintptr_t)ptr - (uintptr_t)&task_slots[0]) % sizeof(tcb_t) == 0);
 }
@@ -110,9 +128,14 @@ bool validate_sem(uintptr_t ptr) {
 bool validate_mutex(uintptr_t ptr) {
   return (((uintptr_t)ptr - (uintptr_t)&mutex_slots[0]) % sizeof(mutex_t) == 0);
 }
+bool validate_socket(uintptr_t ptr) {
+  return (((uintptr_t)ptr - (uintptr_t)&socket_slots[0]) % sizeof(socket_t) ==
+          0);
+}
 
 void static_memory_init(void) {
   task_memory_init();
   semaphore_memory_init();
   mutex_memory_init();
+  socket_memory_init();
 }
