@@ -63,8 +63,9 @@ static spi_return_t spi1_transfer(uint8_t data, uint8_t *received) {
       return SPI_ERR_RXE;
   }
 
+  uint8_t spi_dr = (uint8_t)SPI1->DR;
   if (received != 0)
-    *received = (uint8_t)SPI1->DR;
+    *received = spi_dr;
   return SPI_OK;
 }
 
