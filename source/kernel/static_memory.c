@@ -105,7 +105,7 @@ mutex_t *alloc_mutex(void) {
 
 static void socket_memory_init(void) {
   for (int i = 0; i < N_SOCKETS; i++) {
-    socket_slots[i].status = CREATED;
+    socket_slots[i].status = SOCKET_STATUS_CREATED;
     socket_slots[i].number = i;
     socket_slots[i].port = 0;
     socket_slots[i].protocol = CLOSED;

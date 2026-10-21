@@ -2,6 +2,7 @@
 #define _SYSCALL_H
 
 #include "../source/drivers/w5500.h"
+#include "net.h"
 #include "semaphore.h"
 #include "stdbool.h"
 #include "stdint.h"
@@ -69,7 +70,8 @@ int sys_console_write(const char *buf, uint32_t len);
 socket_t *sys_socket_get(uint8_t n);
 socket_t *sys_socket_open(socket_t *socket);
 void sys_socket_close(socket_t *socket);
-void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len);
+void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len,
+                  net_reply_t *reply_slot);
 void sys_net_link(int32_t *up);
 
 void svc_dispatch(uintptr_t *frame);

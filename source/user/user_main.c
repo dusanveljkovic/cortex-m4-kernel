@@ -1,3 +1,4 @@
+#include "../../include/net.h"
 #include "../../include/semaphore.h"
 #include "../../include/syscall.h"
 #include "fpu_test.h"
@@ -100,6 +101,26 @@ void net_test(void) {
   socket->protocol = UDP;
   socket->port = 67;
   sys_socket_open(socket);
+  uint8_t *buffer = (uint8_t *)sys_malloc(1024 * sizeof(uint8_t));
+  net_reply_t reply = {0, 0, 0, 0};
+  while (true) {
+    sys_net_recv(socket, buffer, 1024, &reply);
+    if (reply.status == NET_STATUS_OK) {
+      uprintf("[user] received udp datagram:\r\n");
+      uprintf("\tIP:PORT\t%d.%d.%d.%d:%d\r\n", reply.src_ip[0], reply.src_ip[1],
+              reply.src_ip[2], reply.src_ip[3], reply.port);
+      uprintf("\tgot\t%d\r\n", reply.got);
+      uprintf("\top\t%x\r\n", buffer[0]);
+      uprintf("\txid\t%x%x%x%x\r\n", buffer[4], buffer[5], buffer[6],
+              buffer[7]);
+      uprintf("\tMAC\t%x%x%x%x%x%x\r\n", buffer[28], buffer[29], buffer[30],
+              buffer[31], buffer[32], buffer[33]);
+    }
+    if (reply.status == NET_STATUS_ERROR) {
+      uprintf("[user] net error\r\n");
+    }
+    sys_sleep(10000);
+  }
 }
 
 void user_main(void *arg) {

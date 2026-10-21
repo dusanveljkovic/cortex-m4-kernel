@@ -91,9 +91,10 @@ inline socket_t *sys_socket_open(socket_t *socket) {
 inline void sys_socket_close(socket_t *socket) {
   syscall(SYS_SOCKET_CLOSE, (uintptr_t)socket, 0, 0, 0);
 }
-inline void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len) {
+inline void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len,
+                         net_reply_t *reply_slot) {
   syscall(SYS_NET_RECV, (uintptr_t)socket, (uintptr_t)buffer,
-          (uintptr_t)buf_len, 0);
+          (uintptr_t)buf_len, (uintptr_t)reply_slot);
 }
 
 extern uint8_t _heap_start;
@@ -308,7 +309,7 @@ void svc_dispatch(uintptr_t *frame) {
                          .socket = socket,
                          .buffer = (uint8_t *)arg1,
                          .buf_len = (uint16_t)arg2,
-                         .result = 0};
+                         .reply_slot = (net_reply_t *)arg3};
     net_send_request(&req);
     if (net_will_wait())
       should_yield = 1;

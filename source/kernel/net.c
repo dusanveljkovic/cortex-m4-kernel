@@ -3,7 +3,7 @@
 #include "../drivers/w5500.h"
 #include <stdbool.h>
 
-static net_request_t current_req = {0, 0, 0, 0, 0, 0, 0};
+static net_request_t current_req = {0, 0, 0, 0, 0, 0};
 static semaphore_t *net_posted, *net_done;
 
 void net_send_request(net_request_t *req) {
@@ -40,9 +40,36 @@ void net_task(void *_a) {
       break;
     }
     case NET_OP_RECV: {
+      if (my_req.reply_slot == 0)
+        break;
+      w5500_recv_status_t status = w5500_socket_recv(
+          my_req.socket, my_req.buffer, my_req.buf_len, &my_req.reply_slot->got,
+          my_req.reply_slot->src_ip, &my_req.reply_slot->port);
+      switch (status) {
+      case W5500_RECV_OK: {
+        my_req.reply_slot->status = NET_STATUS_OK;
+        break;
+      }
+      case W5500_RECV_EMPTY: {
+        my_req.reply_slot->status = NET_STATUS_WAIT;
+        break;
+      }
+      case W5500_RECV_ERR: {
+        my_req.reply_slot->status = NET_STATUS_ERROR;
+        break;
+      }
+      case W5500_RECV_TRUNCATED: {
+        my_req.reply_slot->status = NET_STATUS_OK;
+        break;
+      }
+      }
       break;
     }
     case NET_OP_SEND: {
+      break;
+    }
+    case NET_OP_SOCKET_CLOSE: {
+      w5500_socket_close(my_req.socket);
       break;
     }
     }

@@ -59,6 +59,8 @@
 #define SOCKET_SR_INIT 0x13
 #define SOCKET_SR_UDP 0x22
 
+#define SOCK_CLOSED 0x00
+
 typedef enum {
   CLOSED = 0b0000,
   TCP = 0b0001,
@@ -66,7 +68,13 @@ typedef enum {
   MACRAW = 0b0100
 } socket_protocol_t;
 
-typedef enum { CREATED, OPEN, LISTENING, ERROR } socket_status_t;
+typedef enum {
+  SOCKET_STATUS_CREATED,
+  SOCKET_STATUS_OPEN,
+  SOCKET_STATUS_LISTENING,
+  SOCKET_STATUS_ERROR,
+  SOCKET_STATUS_CLOSED
+} socket_status_t;
 
 typedef struct {
   uint8_t number;
@@ -79,6 +87,18 @@ void w5500_init(const uint8_t mac[6], const uint8_t ip[4],
                 const uint8_t gateway[4], const uint8_t subnet[4]);
 spi_return_t w5500_get_version(uint8_t *data);
 spi_return_t w5500_link_up(int *up);
+
 void w5500_socket_open(socket_t *socket);
+void w5500_socket_close(socket_t *socket);
+
+typedef enum {
+  W5500_RECV_OK,
+  W5500_RECV_TRUNCATED,
+  W5500_RECV_EMPTY,
+  W5500_RECV_ERR
+} w5500_recv_status_t;
+w5500_recv_status_t w5500_socket_recv(socket_t *socket, uint8_t *buffer,
+                                      uint16_t maxlen, uint16_t *got,
+                                      uint8_t src_ip[4], uint16_t *src_port);
 
 #endif

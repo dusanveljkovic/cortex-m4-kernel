@@ -10,15 +10,30 @@
 typedef enum {
   NET_OP_LINK,
   NET_OP_SOCKET_OPEN,
+  NET_OP_SOCKET_CLOSE,
   NET_OP_RECV,
   NET_OP_SEND
 } net_op_t;
+
+typedef enum { NET_STATUS_OK, NET_STATUS_ERROR, NET_STATUS_WAIT } net_status_t;
+
+typedef struct {
+  uint16_t got;
+  uint8_t src_ip[4];
+  uint16_t port;
+
+  net_status_t status;
+} net_reply_t;
 
 typedef struct {
   net_op_t op;
   volatile tcb_t *caller;
   socket_t *socket;
   int32_t *result;
+  net_reply_t *reply_slot;
+
+  uint8_t *buffer;
+  uint16_t buf_len;
 } net_request_t;
 
 void net_send_request(net_request_t *req);
