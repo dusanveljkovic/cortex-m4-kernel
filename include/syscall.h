@@ -35,13 +35,15 @@ enum {
 
   SYS_SOCKET_GET,
   SYS_SOCKET_OPEN,
+  SYS_SOCKET_CLOSE,
   SYS_NET_LINK,
+  SYS_NET_RECV,
 };
 
 void sys_yield(void);
 
-void *sys_malloc(uint32_t size);
-void *sys_calloc(uint32_t count, uint32_t size);
+uintptr_t sys_malloc(uint32_t size);
+uintptr_t sys_calloc(uint32_t count, uint32_t size);
 void sys_free(void *ptr);
 
 semaphore_t *sys_sem_create(uint32_t count);
@@ -66,9 +68,10 @@ int sys_console_write(const char *buf, uint32_t len);
 
 socket_t *sys_socket_get(uint8_t n);
 socket_t *sys_socket_open(socket_t *socket);
+void sys_socket_close(socket_t *socket);
+void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len);
 void sys_net_link(int32_t *up);
 
-void svc_dispatch(uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
-                  uintptr_t arg4);
+void svc_dispatch(uintptr_t *frame);
 
 #endif // !_SYSCALL_H
