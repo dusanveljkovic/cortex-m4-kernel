@@ -15,7 +15,7 @@ typedef struct {
   uint32_t GTPR;
 } USART_RegisterMap;
 
-#define USART2 ((USART_RegisterMap *)0x40004400)
+#define USART2 ((volatile USART_RegisterMap *)0x40004400)
 
 #define USART_ENABLE_RE (1 << 2)
 #define USART_ENABLE_TE (1 << 3)

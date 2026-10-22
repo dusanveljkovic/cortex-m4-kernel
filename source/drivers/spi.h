@@ -16,7 +16,7 @@ typedef struct {
   uint32_t I2SPR;
 } SPI_RegisterMap;
 
-#define SPI1 ((SPI_RegisterMap *)0x40013000)
+#define SPI1 ((volatile SPI_RegisterMap *)0x40013000)
 
 #define SPI_CR1_MSTR (1 << 2)
 #define SPI_CR1_BR_DIV8 (0b010 << 3)
@@ -44,9 +44,17 @@ typedef struct {
   bool is_read;
 } spi1_frame_t;
 
-typedef enum { SPI_OK, SPI_ERR_TXE, SPI_ERR_RXE } spi_return_t;
+typedef enum {
+  SPI_OK,
+  SPI_ERR_TIMEOUT,
+  SPI_ERR_FAULT,
+  SPI_ERR_ARG
+} spi_return_t;
 
-void spi1_init(void);
+typedef enum { SPI_ST_UNINIT, SPI_ST_READY, SPI_ST_FAULTED } spi_state_t;
+
+spi_return_t spi1_init(void);
+spi_return_t spi1_recover(void);
 spi_return_t spi1_transfer_frame(spi1_frame_t *frame);
 
 #endif
