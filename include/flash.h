@@ -6,7 +6,7 @@ typedef struct {
   uint32_t ACR;
 } FLASH_RegisterMap;
 
-#define FLASH ((FLASH_RegisterMap *)0x40023C00)
+#define FLASH ((volatile FLASH_RegisterMap *)0x40023C00)
 
 #define FLASH_ACR_LATENCY_2WS 0x2
 

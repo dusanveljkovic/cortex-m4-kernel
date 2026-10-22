@@ -14,7 +14,7 @@ typedef struct {
   uint32_t AFR[2];
 } GPIO_RegisterMap;
 
-#define GPIOA ((GPIO_RegisterMap *)0x40020000)
+#define GPIOA ((volatile GPIO_RegisterMap *)0x40020000)
 
 #define SET_GPIO_MODE(gpio, function, pin_number)                              \
   gpio->MODER &= ~(0b11 << (2 * pin_number));                                  \

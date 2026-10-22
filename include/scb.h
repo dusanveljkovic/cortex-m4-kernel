@@ -20,7 +20,7 @@ typedef struct {
 
 } SCB_RegisterMapType;
 
-#define SCB ((SCB_RegisterMapType *)0xE000ED00)
+#define SCB ((volatile SCB_RegisterMapType *)0xE000ED00)
 
 #define SCB_AIRCR_VECTKEY 0x5FA
 #define SCB_AIRCR_VECTKEY_Pos 16

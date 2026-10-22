@@ -19,7 +19,7 @@ typedef struct {
 
 #define USART2_IRQ 38
 
-#define NVIC ((NVIC_RegisterMapType *)0xE000E100)
+#define NVIC ((volatile NVIC_RegisterMapType *)0xE000E100)
 
 #define NVIC_ENABLE_IRQ(irq_number)                                            \
   NVIC->ISER[irq_number / 32] |= (1 << (irq_number % 32))

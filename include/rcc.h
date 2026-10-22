@@ -15,7 +15,7 @@ typedef struct {
   uint32_t APB2ENR;
 } RCC_RegisterMap;
 
-#define RCC ((RCC_RegisterMap *)0x40023800)
+#define RCC ((volatile RCC_RegisterMap *)0x40023800)
 
 #define RCC_CR_HSION (1 << 16)
 #define RCC_CR_HSIRDY (1 << 17)

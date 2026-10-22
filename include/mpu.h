@@ -12,7 +12,7 @@ typedef struct {
   uint32_t RASR;
 } MPU_RegisterMapType;
 
-#define MPU ((MPU_RegisterMapType *)0xE000ED90)
+#define MPU ((volatile MPU_RegisterMapType *)0xE000ED90)
 
 #define MPU_RASR_XN_Pos 28
 #define MPU_RASR_AP_Pos 24

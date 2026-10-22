@@ -9,7 +9,7 @@ typedef struct {
   uint32_t CALIB;
 } STK_RegisterMapType;
 
-#define STK ((STK_RegisterMapType *)0xE000E010)
+#define STK ((volatile STK_RegisterMapType *)0xE000E010)
 
 #define STK_CTRL_ENABLE (1 << 0)
 #define STK_CTRL_TICKINT (1 << 1)
