@@ -46,7 +46,15 @@ int main() {
   driver_register(&usart2_driver);
   console_attach(driver_find("usart2"));
 
-  spi1_init();
+  spi_return_t spi_ret = spi1_configure();
+  if (spi_ret != SPI_OK) {
+    kprintf("[!][boot] Couldn't configure SPI1\r\n");
+  } else {
+    spi_ret = spi1_start();
+    if (spi_ret != SPI_OK) {
+      kprintf("[!][boot] Couldn't start SPI1\r\n");
+    }
+  }
 
   scheduler_init();
   // mpu_init();

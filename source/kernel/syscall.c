@@ -78,18 +78,19 @@ inline int sys_console_write(const char *buf, uint32_t len) {
                                  (uintptr_t)len, 0, 0);
 }
 
-inline void sys_net_link(int32_t *up) {
-  syscall(SYS_NET_LINK, (uintptr_t)up, 0, 0, 0);
+inline void sys_net_link(int32_t *up, net_reply_t *reply_slot) {
+  syscall(SYS_NET_LINK, (uintptr_t)up, (uintptr_t)reply_slot, 0, 0);
 }
 
 inline socket_t *sys_socket_get(uint8_t n) {
   return (socket_t *)syscall(SYS_SOCKET_GET, n, 0, 0, 0);
 }
-inline socket_t *sys_socket_open(socket_t *socket) {
-  return (socket_t *)syscall(SYS_SOCKET_OPEN, (uintptr_t)socket, 0, 0, 0);
+inline socket_t *sys_socket_open(socket_t *socket, net_reply_t *reply_slot) {
+  return (socket_t *)syscall(SYS_SOCKET_OPEN, (uintptr_t)socket,
+                             (uintptr_t)reply_slot, 0, 0);
 }
-inline void sys_socket_close(socket_t *socket) {
-  syscall(SYS_SOCKET_CLOSE, (uintptr_t)socket, 0, 0, 0);
+inline void sys_socket_close(socket_t *socket, net_reply_t *reply_slot) {
+  syscall(SYS_SOCKET_CLOSE, (uintptr_t)socket, (uintptr_t)reply_slot, 0, 0);
 }
 inline void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len,
                          net_reply_t *reply_slot) {
@@ -258,17 +259,6 @@ void svc_dispatch(uintptr_t *frame) {
     break;
   }
 
-  case SYS_NET_LINK: {
-    net_request_t req = {.op = NET_OP_LINK,
-                         .caller = current_task,
-                         .socket = 0,
-                         .result = (int32_t *)arg0};
-    net_send_request(&req);
-    if (net_will_wait())
-      should_yield = 1;
-    break;
-  }
-
   case SYS_SOCKET_GET: {
     socket_t *socket = get_socket((uint8_t)arg0);
     ret = (uintptr_t)socket;
@@ -281,7 +271,8 @@ void svc_dispatch(uintptr_t *frame) {
     net_request_t req = {.op = NET_OP_SOCKET_OPEN,
                          .caller = current_task,
                          .socket = socket,
-                         .result = 0};
+                         .result = 0,
+                         .reply_slot = (net_reply_t *)arg1};
     net_send_request(&req);
     if (net_will_wait())
       should_yield = 1;
@@ -294,7 +285,18 @@ void svc_dispatch(uintptr_t *frame) {
     net_request_t req = {.op = NET_OP_SOCKET_CLOSE,
                          .caller = current_task,
                          .socket = socket,
-                         .result = 0};
+                         .reply_slot = (net_reply_t *)arg1};
+    net_send_request(&req);
+    if (net_will_wait())
+      should_yield = 1;
+    break;
+  }
+  case SYS_NET_LINK: {
+    net_request_t req = {.op = NET_OP_LINK,
+                         .caller = current_task,
+                         .socket = 0,
+                         .result = (int32_t *)arg0,
+                         .reply_slot = (net_reply_t *)arg1};
     net_send_request(&req);
     if (net_will_wait())
       should_yield = 1;

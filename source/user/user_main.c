@@ -87,39 +87,72 @@ void low_task(void *arg) {
   }
 }
 
+void print_net_error(net_reply_t *reply) {
+  uprintf("![user] NET ERROR: ");
+  switch (reply->status) {
+  case NET_STATUS_OK:
+    uprintf("OK\r\n");
+    break;
+  case NET_STATUS_RETRY:
+    uprintf("RETRY\r\n");
+    break;
+  case NET_STATUS_BAD_REQUEST:
+    uprintf("BAD REQUEST\r\n");
+    break;
+  case NET_STATUS_FAULT:
+    uprintf("FAULT\r\n");
+    break;
+  case NET_STATUS_DEAD:
+    uprintf("DEAD\r\n");
+    break;
+  }
+}
+
 void net_test(void) {
   uprintf("[user] net test\r\n");
   int32_t link = -1;
+  net_reply_t reply_slot = {0, 0, 0, 0, 0};
+
   while (true) {
-    sys_net_link(&link);
+    sys_net_link(&link, &reply_slot);
+    if (reply_slot.status != NET_STATUS_OK) {
+      print_net_error(&reply_slot);
+      return;
+    }
     uprintf("[user] link status %d\r\n", link);
     sys_sleep(1000);
     if (link == 1)
       break;
   }
+
   socket_t *socket = sys_socket_get(0);
   socket->protocol = UDP;
-  socket->port = 67;
-  sys_socket_open(socket);
+  socket->port = 200;
+  sys_socket_open(socket, &reply_slot);
+  if (reply_slot.status != NET_STATUS_OK) {
+    print_net_error(&reply_slot);
+    return;
+  }
   uint8_t *buffer = (uint8_t *)sys_malloc(1024 * sizeof(uint8_t));
-  net_reply_t reply = {0, 0, 0, 0};
+
   while (true) {
-    sys_net_recv(socket, buffer, 1024, &reply);
-    if (reply.status == NET_STATUS_OK) {
+    sys_net_recv(socket, buffer, 1024, &reply_slot);
+    if (reply_slot.status == NET_STATUS_OK && reply_slot.got != 0) {
       uprintf("[user] received udp datagram:\r\n");
-      uprintf("\tIP:PORT\t%d.%d.%d.%d:%d\r\n", reply.src_ip[0], reply.src_ip[1],
-              reply.src_ip[2], reply.src_ip[3], reply.port);
-      uprintf("\tgot\t%d\r\n", reply.got);
+      uprintf("\tIP:PORT\t%d.%d.%d.%d:%d\r\n", reply_slot.src_ip[0],
+              reply_slot.src_ip[1], reply_slot.src_ip[2], reply_slot.src_ip[3],
+              reply_slot.port);
+      uprintf("\tgot\t%d\r\n", reply_slot.got);
       uprintf("\top\t%x\r\n", buffer[0]);
       uprintf("\txid\t%x%x%x%x\r\n", buffer[4], buffer[5], buffer[6],
               buffer[7]);
       uprintf("\tMAC\t%x%x%x%x%x%x\r\n", buffer[28], buffer[29], buffer[30],
               buffer[31], buffer[32], buffer[33]);
     }
-    if (reply.status == NET_STATUS_ERROR) {
-      uprintf("[user] net error\r\n");
-    }
-    sys_sleep(10000);
+    if (reply_slot.status != NET_STATUS_OK)
+      print_net_error(&reply_slot);
+
+    sys_sleep(2000);
   }
 }
 

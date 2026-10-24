@@ -5,10 +5,11 @@
 #include "stdbool.h"
 #include "tcb.h"
 
-#define N_TASKS 16
-#define TASK_STACK_SIZE 1024
+#define N_TASKS 8
+#define TASK_STACK_SIZE 2048
 
 void static_memory_init(void);
+void socket_memory_init(void);
 
 tcb_t *alloc_task(void);
 semaphore_t *alloc_sem(void);

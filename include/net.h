@@ -15,12 +15,19 @@ typedef enum {
   NET_OP_SEND
 } net_op_t;
 
-typedef enum { NET_STATUS_OK, NET_STATUS_ERROR, NET_STATUS_WAIT } net_status_t;
+typedef enum {
+  NET_STATUS_OK,
+  NET_STATUS_FAULT,
+  NET_STATUS_RETRY,
+  NET_STATUS_BAD_REQUEST,
+  NET_STATUS_DEAD
+} net_status_t;
 
 typedef struct {
   uint16_t got;
   uint8_t src_ip[4];
   uint16_t port;
+  bool truncated;
 
   net_status_t status;
 } net_reply_t;

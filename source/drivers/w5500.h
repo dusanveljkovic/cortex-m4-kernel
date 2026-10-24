@@ -59,6 +59,8 @@
 #define SOCKET_SR_INIT 0x13
 #define SOCKET_SR_UDP 0x22
 
+#define SOCKET_IR_RECV 0x04
+
 #define SOCK_CLOSED 0x00
 
 typedef enum {
@@ -83,22 +85,26 @@ typedef struct {
   socket_status_t status;
 } socket_t;
 
-void w5500_init(const uint8_t mac[6], const uint8_t ip[4],
-                const uint8_t gateway[4], const uint8_t subnet[4]);
-spi_return_t w5500_get_version(uint8_t *data);
-spi_return_t w5500_link_up(int *up);
-
-void w5500_socket_open(socket_t *socket);
-void w5500_socket_close(socket_t *socket);
-
 typedef enum {
-  W5500_RECV_OK,
-  W5500_RECV_TRUNCATED,
-  W5500_RECV_EMPTY,
-  W5500_RECV_ERR
-} w5500_recv_status_t;
-w5500_recv_status_t w5500_socket_recv(socket_t *socket, uint8_t *buffer,
-                                      uint16_t maxlen, uint16_t *got,
-                                      uint8_t src_ip[4], uint16_t *src_port);
+  W5500_OK,
+  W5500_ERR_TRANSIENT,
+  W5500_ERR_FAULT,
+  W5500_ERR_UNSTABLE,
+  W5500_ERR_STATE,
+  W5500_ERR_ARG
+} w5500_status_t;
+
+w5500_status_t w5500_init(const uint8_t mac[6], const uint8_t ip[4],
+                          const uint8_t gateway[4], const uint8_t subnet[4]);
+w5500_status_t w5500_get_version(uint8_t *data);
+w5500_status_t w5500_link_up(int *up);
+
+w5500_status_t w5500_socket_open(socket_t *socket);
+w5500_status_t w5500_socket_close(socket_t *socket);
+
+w5500_status_t w5500_socket_recv(socket_t *socket, uint8_t *buffer,
+                                 uint16_t maxlen, uint16_t *got,
+                                 uint8_t src_ip[4], uint16_t *src_port,
+                                 bool *truncated);
 
 #endif

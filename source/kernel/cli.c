@@ -34,6 +34,8 @@ void cli_cmd_mutex(int argc, char **argv);
 
 void cli_cmd_link(int argc, char **argv);
 
+void cli_cmd_spioff(int argc, char **argv);
+
 void cli_cmd_reboot(int argc, char **argv);
 
 static const cli_command_t commands[] = {
@@ -44,6 +46,7 @@ static const cli_command_t commands[] = {
     {"heap", "Print heap usage", cli_cmd_heap},
     {"mutex", "Print mutex owners/waiters", cli_cmd_mutex},
     {"link", "Print w5500 link status", cli_cmd_link},
+    {"spioff", "Turns spi off (used for testing)", cli_cmd_spioff},
     {"reboot", "Reboot the MCU", cli_cmd_reboot},
 };
 
@@ -219,8 +222,14 @@ void cli_cmd_mutex(int argc, char **argv) {
 
 void cli_cmd_link(int argc, char **argv) {
   int32_t status = -1;
-  sys_net_link(&status);
+  net_reply_t reply_slot = {0, 0, 0, 0, 0};
+  sys_net_link(&status, &reply_slot);
   kprintf("Link status: %d\r\n", status);
+}
+
+void cli_cmd_spioff(int argc, char **argv) {
+  SPI1->CR1 &= ~SPI_CR1_SPE;
+  kprintf("Spi turned off\r\n");
 }
 
 __attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {

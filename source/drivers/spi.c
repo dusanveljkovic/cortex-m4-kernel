@@ -12,8 +12,11 @@ static void spi1_cs_deselect(void) { GPIO_PIN_HIGH(GPIOA, SPI1_PIN_CS); }
 static mutex_t spi1_lock = {0, 0, 0, 0};
 static spi_state_t state = SPI_ST_UNINIT;
 
-spi_return_t spi1_init(void) {
-  if (state == SPI_ST_READY) {
+/* Configure the needed registers (RCC, GPIO, SPI1)
+ * Returns SPI_ERR_ARG when called from state that is not SPI_ST_UNINIT
+ */
+spi_return_t spi1_configure(void) {
+  if (state != SPI_ST_UNINIT) {
     return SPI_ERR_ARG;
   }
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
@@ -41,25 +44,47 @@ spi_return_t spi1_init(void) {
 
   SPI1->CR1 |= SPI_CR1_SPE;
 
+  state = SPI_ST_CONFIGURED;
+  return SPI_OK;
+}
+
+/* Initializes the mutex and sets the state to SPI_ST_READY so other SPI
+ * function can work Return SPI_ERR_ARG when called with state that is not
+ * SPI_ST_CONFIGURED
+ */
+spi_return_t spi1_start(void) {
+  if (state != SPI_ST_CONFIGURED)
+    return SPI_ERR_ARG;
   mutex_init(&spi1_lock);
   state = SPI_ST_READY;
   return SPI_OK;
 }
 
+/* Used to recover SPI from a fault by reconfiguring it. Doesn't reinitialize
+ * the mutex Return SPI_ERR_ARG when called with state that is not
+ * SPI_ST_FAULTED
+ */
 spi_return_t spi1_recover(void) {
-  mutex_lock(&spi1_lock);
+  if (state != SPI_ST_FAULTED)
+    return SPI_ERR_ARG;
+  sys_mutex_lock(&spi1_lock);
 
   state = SPI_ST_UNINIT;
-  spi1_init();
+  spi1_configure();
   volatile uint8_t drain = (uint8_t)SPI1->DR;
   state = SPI_ST_READY;
 
-  mutex_unlock(&spi1_lock);
+  sys_mutex_unlock(&spi1_lock);
   return SPI_OK;
 }
 
+/*
+ * Transfers a byte using SPI shift registers. First waits for a TX slot, then
+ * sends a byte and waits for a reply.
+ * Returns SPI_ERR_TIMEOUT when the wait for tx slot or rx data exceeds the
+ * limit
+ */
 static spi_return_t spi1_transfer(uint8_t data, uint8_t *received) {
-  // transfer takes 762ns per byte
   uint32_t spins = 0;
   while (!(SPI1->SR & SPI_SR_TXE)) {
     if (++spins >= SPI_SPIN_LIMIT) {
@@ -73,7 +98,7 @@ static spi_return_t spi1_transfer(uint8_t data, uint8_t *received) {
   while (!(SPI1->SR & SPI_SR_RXNE)) {
     if (++spins >= SPI_SPIN_LIMIT) {
       // drain the stale byte before returning
-      volatile uint8_t drain = (uint8_t)SPI1->DR;
+      (void)SPI1->DR;
       return SPI_ERR_TIMEOUT;
     }
   }
@@ -84,7 +109,14 @@ static spi_return_t spi1_transfer(uint8_t data, uint8_t *received) {
   return SPI_OK;
 }
 
-spi_return_t spi1_transfer_frame(spi1_frame_t *frame) {
+/* Transfers a whole spi1_frame_t
+ * Locks the mutex, activates CS, transfers the header, then either transfers
+ * the tx_data or gets data from the peripheral into rx_data Returns SPI_ERR_ARG
+ * when SPI is uninitialized or the frame is not proper Returns SPI_ERR_FAULT
+ * when state is FAULTED Can set state to SPI_ST_FAULTED when any byte transfer
+ * fails
+ */
+spi_return_t spi1_transfer_frame(spi_frame_t *frame) {
   if (state == SPI_ST_UNINIT)
     return SPI_ERR_ARG;
   if (frame == 0)
@@ -108,6 +140,8 @@ spi_return_t spi1_transfer_frame(spi1_frame_t *frame) {
     sys_mutex_unlock(&spi1_lock);
     return SPI_ERR_FAULT;
   }
+  if (SPI1->SR & SPI_SR_RXNE)
+    (void)SPI1->DR;
   spi1_cs_select();
 
   for (uint32_t i = 0; i < frame->header_len; i++) {

@@ -3,6 +3,11 @@
 
 #include "stdbool.h"
 #include "stdint.h"
+/*
+ * Has definitions of SPI register map
+ * Functions that configure, start, recover SPI1
+ * Function that transfers a spi1_transfer_frame through spi
+ */
 
 typedef struct {
   uint32_t CR1;
@@ -42,7 +47,7 @@ typedef struct {
   uint32_t data_len;
 
   bool is_read;
-} spi1_frame_t;
+} spi_frame_t;
 
 typedef enum {
   SPI_OK,
@@ -51,10 +56,16 @@ typedef enum {
   SPI_ERR_ARG
 } spi_return_t;
 
-typedef enum { SPI_ST_UNINIT, SPI_ST_READY, SPI_ST_FAULTED } spi_state_t;
+typedef enum {
+  SPI_ST_UNINIT,
+  SPI_ST_CONFIGURED,
+  SPI_ST_READY,
+  SPI_ST_FAULTED
+} spi_state_t;
 
-spi_return_t spi1_init(void);
+spi_return_t spi1_configure(void);
+spi_return_t spi1_start(void);
 spi_return_t spi1_recover(void);
-spi_return_t spi1_transfer_frame(spi1_frame_t *frame);
+spi_return_t spi1_transfer_frame(spi_frame_t *frame);
 
 #endif
