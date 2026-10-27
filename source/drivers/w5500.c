@@ -483,6 +483,8 @@ w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
     uint8_t ir = 0;
     ret_status =
         w5500_read8(SOCKET_IR, W5500_BSB_SOCK_REG(socket->number), &ir);
+    if (ret_status != W5500_OK)
+      return ret_status;
     if (ir & SOCKET_IR_SENDOK) {
 
       socket->has_unreaped_send = false;
@@ -498,11 +500,14 @@ w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
       ret_status = w5500_reset_tx_wr(socket);
       if (ret_status != W5500_OK)
         return ret_status;
+
+      socket->has_unreaped_send = false;
     } else {
+      *sent = 0;
       return W5500_ERR_TRANSIENT;
     }
   } else {
-    w5500_ir_clear(socket, SOCKET_IR_SENDOK | SOCKET_IR_TIMEOUT);
+    ret_status = w5500_ir_clear(socket, SOCKET_IR_SENDOK | SOCKET_IR_TIMEOUT);
     if (ret_status != W5500_OK)
       return ret_status;
   }
@@ -604,8 +609,7 @@ w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
       return ret_status;
     }
     if (current_ir & SOCKET_IR_TIMEOUT) {
-      w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
-                    write_pointer);
+      w5500_reset_tx_wr(socket);
       w5500_ir_clear(socket, SOCKET_IR_TIMEOUT);
       *sent = 0;
       return W5500_ERR_UNREACHABLE;

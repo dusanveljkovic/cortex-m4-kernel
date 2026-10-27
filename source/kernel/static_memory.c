@@ -109,6 +109,7 @@ void socket_memory_init(void) {
     socket_slots[i].number = i;
     socket_slots[i].port = 0;
     socket_slots[i].protocol = CLOSED;
+    socket_slots[i].has_unreaped_send = false;
   }
 }
 
