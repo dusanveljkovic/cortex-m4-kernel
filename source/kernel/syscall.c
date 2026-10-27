@@ -97,6 +97,11 @@ inline void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len,
   syscall(SYS_NET_RECV, (uintptr_t)socket, (uintptr_t)buffer,
           (uintptr_t)buf_len, (uintptr_t)reply_slot);
 }
+inline void sys_net_send(socket_t *socket, net_send_args_t *args,
+                         net_reply_t *reply_slot) {
+  syscall(SYS_NET_SEND, (uintptr_t)socket, (uintptr_t)args,
+          (uintptr_t)reply_slot, 0);
+}
 
 extern uint8_t _heap_start;
 extern uint8_t _heap_end;
@@ -272,6 +277,8 @@ void svc_dispatch(uintptr_t *frame) {
                          .caller = current_task,
                          .socket = socket,
                          .result = 0,
+                         .dst_ip = 0,
+                         .dst_port = 0,
                          .reply_slot = (net_reply_t *)arg1};
     net_send_request(&req);
     if (net_will_wait())
@@ -285,6 +292,8 @@ void svc_dispatch(uintptr_t *frame) {
     net_request_t req = {.op = NET_OP_SOCKET_CLOSE,
                          .caller = current_task,
                          .socket = socket,
+                         .dst_ip = 0,
+                         .dst_port = 0,
                          .reply_slot = (net_reply_t *)arg1};
     net_send_request(&req);
     if (net_will_wait())
@@ -295,6 +304,8 @@ void svc_dispatch(uintptr_t *frame) {
     net_request_t req = {.op = NET_OP_LINK,
                          .caller = current_task,
                          .socket = 0,
+                         .dst_ip = 0,
+                         .dst_port = 0,
                          .result = (int32_t *)arg0,
                          .reply_slot = (net_reply_t *)arg1};
     net_send_request(&req);
@@ -311,7 +322,29 @@ void svc_dispatch(uintptr_t *frame) {
                          .socket = socket,
                          .buffer = (uint8_t *)arg1,
                          .buf_len = (uint16_t)arg2,
+                         .dst_ip = 0,
+                         .dst_port = 0,
                          .reply_slot = (net_reply_t *)arg3};
+    net_send_request(&req);
+    if (net_will_wait())
+      should_yield = 1;
+    break;
+  }
+  case SYS_NET_SEND: {
+    if (!validate_socket(arg0))
+      break;
+    socket_t *socket = (socket_t *)arg0;
+    net_send_args_t *send_args = (net_send_args_t *)arg1;
+    net_request_t req = {.op = NET_OP_SEND,
+                         .caller = current_task,
+                         .socket = socket,
+                         .buffer = send_args->tx_data,
+                         .buf_len = send_args->tx_length,
+                         .dst_port = send_args->dst_port,
+                         .reply_slot = (net_reply_t *)arg2};
+    for (int i = 0; i < 4; i++) {
+      req.dst_ip[i] = send_args->dst_ip[i];
+    }
     net_send_request(&req);
     if (net_will_wait())
       should_yield = 1;

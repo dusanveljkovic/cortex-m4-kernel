@@ -16,3 +16,11 @@ int strlen(const char *str) {
     count++;
   return count;
 }
+
+void *memset(void *dst, int val, uint32_t len) {
+  uint8_t *ptr = (uint8_t *)dst;
+  while (len-- > 0) {
+    *ptr++ = (uint8_t)val;
+  }
+  return dst;
+}

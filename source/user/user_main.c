@@ -1,6 +1,7 @@
 #include "../../include/net.h"
 #include "../../include/semaphore.h"
 #include "../../include/syscall.h"
+#include "../../include/utils.h"
 #include "fpu_test.h"
 #include "uprintf.h"
 #include <stdint.h>
@@ -105,6 +106,9 @@ void print_net_error(net_reply_t *reply) {
   case NET_STATUS_DEAD:
     uprintf("DEAD\r\n");
     break;
+  case NET_STATUS_UNREACHABLE:
+    uprintf("UNREACHABLE\r\n");
+    break;
   }
 }
 
@@ -127,7 +131,7 @@ void net_test(void) {
 
   socket_t *socket = sys_socket_get(0);
   socket->protocol = UDP;
-  socket->port = 200;
+  socket->port = 6767;
   sys_socket_open(socket, &reply_slot);
   if (reply_slot.status != NET_STATUS_OK) {
     print_net_error(&reply_slot);
@@ -135,25 +139,50 @@ void net_test(void) {
   }
   uint8_t *buffer = (uint8_t *)sys_malloc(1024 * sizeof(uint8_t));
 
-  while (true) {
-    sys_net_recv(socket, buffer, 1024, &reply_slot);
-    if (reply_slot.status == NET_STATUS_OK && reply_slot.got != 0) {
-      uprintf("[user] received udp datagram:\r\n");
-      uprintf("\tIP:PORT\t%d.%d.%d.%d:%d\r\n", reply_slot.src_ip[0],
-              reply_slot.src_ip[1], reply_slot.src_ip[2], reply_slot.src_ip[3],
-              reply_slot.port);
-      uprintf("\tgot\t%d\r\n", reply_slot.got);
-      uprintf("\top\t%x\r\n", buffer[0]);
-      uprintf("\txid\t%x%x%x%x\r\n", buffer[4], buffer[5], buffer[6],
-              buffer[7]);
-      uprintf("\tMAC\t%x%x%x%x%x%x\r\n", buffer[28], buffer[29], buffer[30],
-              buffer[31], buffer[32], buffer[33]);
-    }
-    if (reply_slot.status != NET_STATUS_OK)
-      print_net_error(&reply_slot);
+  // while (true) {
+  //   sys_net_recv(socket, buffer, 1024, &reply_slot);
+  //   if (reply_slot.status == NET_STATUS_OK && reply_slot.got != 0) {
+  //     uprintf("[user] received udp datagram:\r\n");
+  //     uprintf("\tIP:PORT\t%d.%d.%d.%d:%d\r\n", reply_slot.src_ip[0],
+  //             reply_slot.src_ip[1], reply_slot.src_ip[2],
+  //             reply_slot.src_ip[3], reply_slot.port);
+  //     uprintf("\tgot\t%d\r\n", reply_slot.got);
+  //     uprintf("\top\t%x\r\n", buffer[0]);
+  //     uprintf("\txid\t%x%x%x%x\r\n", buffer[4], buffer[5], buffer[6],
+  //             buffer[7]);
+  //     uprintf("\tMAC\t%x%x%x%x%x%x\r\n", buffer[28], buffer[29], buffer[30],
+  //             buffer[31], buffer[32], buffer[33]);
+  //   }
+  //   if (reply_slot.status != NET_STATUS_OK)
+  //     print_net_error(&reply_slot);
+  //
+  //   sys_sleep(2000);
+  // }
+  uint8_t *send_buffer = (uint8_t *)sys_malloc(300 * sizeof(uint8_t));
+  uint8_t count = 0;
 
-    sys_sleep(2000);
+  // while (true) {
+  memset(send_buffer, count++, 300);
+  uprintf("[user]sent buffer: \r\n");
+  for (int i = 0; i < 300; i++) {
+    uprintf("%x ", send_buffer[i]);
   }
+  uprintf("\r\n");
+  net_send_args_t args = {.tx_data = send_buffer,
+                          .tx_length = 300,
+                          .dst_ip = {192, 168, 0, 200},
+                          .dst_port = 6767};
+  sys_net_send(socket, &args, &reply_slot);
+  print_net_error(&reply_slot);
+  sys_sleep(2000);
+  net_send_args_t args2 = {.tx_data = send_buffer,
+                           .tx_length = 300,
+                           .dst_ip = {255, 255, 255, 255},
+                           .dst_port = 6767};
+  sys_net_send(socket, &args2, &reply_slot);
+  print_net_error(&reply_slot);
+  sys_sleep(2000);
+  // }
 }
 
 void user_main(void *arg) {

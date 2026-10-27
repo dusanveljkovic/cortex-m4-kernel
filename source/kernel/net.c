@@ -64,7 +64,9 @@ void net_task(void *_a) {
       break;
     }
     case NET_OP_SEND: {
-      ret_status = W5500_ERR_ARG;
+      ret_status = w5500_socket_send(my_req.socket, my_req.buffer,
+                                     my_req.buf_len, &my_req.reply_slot->got,
+                                     my_req.dst_ip, my_req.dst_port);
       break;
     }
     case NET_OP_SOCKET_CLOSE: {
@@ -78,6 +80,10 @@ void net_task(void *_a) {
       my_req.reply_slot->status = NET_STATUS_OK;
       break;
     }
+    case W5500_ERR_UNREACHABLE: {
+      my_req.reply_slot->status = NET_STATUS_UNREACHABLE;
+      break;
+    }
     case W5500_ERR_UNSTABLE:
     case W5500_ERR_TRANSIENT: {
       my_req.reply_slot->status = NET_STATUS_RETRY;
@@ -89,7 +95,6 @@ void net_task(void *_a) {
     }
     case W5500_ERR_STATE: {
       init_status = w5500_init(mac, ip, gateway, subnet);
-      kprintf("init_status %d\r\n", init_status);
       socket_memory_init();
       if (init_status != W5500_OK)
         my_req.reply_slot->status = NET_STATUS_DEAD;
@@ -99,7 +104,6 @@ void net_task(void *_a) {
     }
     case W5500_ERR_FAULT: {
       spi_return_t spi_ret = spi1_recover();
-      kprintf("spi_ret %d\r\n", spi_ret);
       my_req.reply_slot->status = NET_STATUS_FAULT;
       break;
     }

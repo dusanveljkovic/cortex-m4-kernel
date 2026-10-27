@@ -37,8 +37,10 @@ enum {
   SYS_SOCKET_GET,
   SYS_SOCKET_OPEN,
   SYS_SOCKET_CLOSE,
+
   SYS_NET_LINK,
   SYS_NET_RECV,
+  SYS_NET_SEND,
 };
 
 void sys_yield(void);
@@ -71,6 +73,14 @@ socket_t *sys_socket_get(uint8_t n);
 socket_t *sys_socket_open(socket_t *socket, net_reply_t *reply_slot);
 void sys_socket_close(socket_t *socket, net_reply_t *reply_slot);
 void sys_net_recv(socket_t *socket, uint8_t *buffer, uint16_t buf_len,
+                  net_reply_t *reply_slot);
+typedef struct {
+  uint8_t *tx_data;
+  uint16_t tx_length;
+  uint8_t dst_ip[4];
+  uint16_t dst_port;
+} net_send_args_t;
+void sys_net_send(socket_t *socket, net_send_args_t *args,
                   net_reply_t *reply_slot);
 void sys_net_link(int32_t *up, net_reply_t *reply_slot);
 

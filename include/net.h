@@ -20,6 +20,7 @@ typedef enum {
   NET_STATUS_FAULT,
   NET_STATUS_RETRY,
   NET_STATUS_BAD_REQUEST,
+  NET_STATUS_UNREACHABLE,
   NET_STATUS_DEAD
 } net_status_t;
 
@@ -41,6 +42,9 @@ typedef struct {
 
   uint8_t *buffer;
   uint16_t buf_len;
+
+  uint8_t dst_ip[4];
+  uint16_t dst_port;
 } net_request_t;
 
 void net_send_request(net_request_t *req);

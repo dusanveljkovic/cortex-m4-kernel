@@ -404,11 +404,34 @@ w5500_status_t w5500_socket_recv(socket_t *socket, uint8_t *buffer,
   ret_status = w5500_write8(SOCKET_CR, W5500_BSB_SOCK_REG(socket->number),
                             SOCKET_CMD_RECV);
   if (ret_status != W5500_OK) {
+    // restore RX_RD to the old value because the transaction didn't commit
+    w5500_write16(SOCKET_RX_RD, W5500_BSB_SOCK_REG(socket->number),
+                  read_pointer - 8);
     *got = 0;
     *truncated = false;
     return ret_status;
   }
-  uint8_t attempts = 0;
+  uint8_t current_cr = SOCKET_CMD_RECV;
+  uint8_t tries = 0;
+  do {
+    sys_sleep(1);
+    ret_status =
+        w5500_read8(SOCKET_CR, W5500_BSB_SOCK_REG(socket->number), &current_cr);
+    if (ret_status != W5500_OK && ret_status != W5500_ERR_TRANSIENT) {
+      w5500_write16(SOCKET_RX_RD, W5500_BSB_SOCK_REG(socket->number),
+                    read_pointer - 8);
+      *got = 0;
+      *truncated = false;
+      return ret_status;
+    }
+  } while (current_cr != 0 && ++tries < 5);
+  if (tries == 5) {
+    w5500_write16(SOCKET_RX_RD, W5500_BSB_SOCK_REG(socket->number),
+                  read_pointer - 8);
+    *got = 0;
+    *truncated = false;
+    return W5500_ERR_TRANSIENT;
+  }
   uint16_t new_recv_len = 0xFFFF;
   ret_status = w5500_read16_stable(
       SOCKET_RX_RSR, W5500_BSB_SOCK_REG(socket->number), &new_recv_len);
@@ -424,5 +447,175 @@ w5500_status_t w5500_socket_recv(socket_t *socket, uint8_t *buffer,
   }
 
   *truncated = header.length > maxlen;
+  return W5500_OK;
+}
+
+#define SEND_TRIES 5
+
+inline static w5500_status_t w5500_ir_clear(socket_t *socket, uint8_t mask) {
+  return w5500_write8(SOCKET_IR, W5500_BSB_SOCK_REG(socket->number), mask);
+}
+
+static w5500_status_t w5500_reset_tx_wr(socket_t *socket) {
+  uint16_t tx_rd = 0;
+  w5500_status_t ret_status = W5500_OK;
+  ret_status =
+      w5500_read16(SOCKET_TX_RD, W5500_BSB_SOCK_REG(socket->number), &tx_rd);
+  if (ret_status != W5500_OK)
+    return ret_status;
+  ret_status =
+      w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number), tx_rd);
+  return ret_status;
+}
+
+w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
+                                 uint16_t tx_length, uint16_t *sent,
+                                 uint8_t dst_ip[4], uint16_t dst_port) {
+  if (socket == 0 || tx_data == 0 || tx_length == 0 || dst_ip == 0 ||
+      dst_port == 0 || sent == 0)
+    return W5500_ERR_ARG;
+
+  uint16_t tx_available = 0;
+  uint8_t tries = 0;
+  w5500_status_t ret_status = W5500_OK;
+
+  if (socket->has_unreaped_send) {
+    uint8_t ir = 0;
+    ret_status =
+        w5500_read8(SOCKET_IR, W5500_BSB_SOCK_REG(socket->number), &ir);
+    if (ir & SOCKET_IR_SENDOK) {
+
+      socket->has_unreaped_send = false;
+      ret_status = w5500_ir_clear(socket, SOCKET_IR_SENDOK);
+      if (ret_status != W5500_OK)
+        return ret_status;
+
+    } else if (ir & SOCKET_IR_TIMEOUT) {
+      ret_status = w5500_ir_clear(socket, SOCKET_IR_TIMEOUT);
+      if (ret_status != W5500_OK)
+        return ret_status;
+
+      ret_status = w5500_reset_tx_wr(socket);
+      if (ret_status != W5500_OK)
+        return ret_status;
+    } else {
+      return W5500_ERR_TRANSIENT;
+    }
+  } else {
+    w5500_ir_clear(socket, SOCKET_IR_SENDOK | SOCKET_IR_TIMEOUT);
+    if (ret_status != W5500_OK)
+      return ret_status;
+  }
+
+  do {
+    sys_sleep(1);
+    ret_status = w5500_read16_stable(
+        SOCKET_TX_FSR, W5500_BSB_SOCK_REG(socket->number), &tx_available);
+    if (ret_status != W5500_OK && ret_status != W5500_ERR_TRANSIENT)
+      return ret_status;
+  } while (tx_available < tx_length && ++tries < SEND_TRIES);
+
+  if (tries == SEND_TRIES) {
+    *sent = 0;
+    return W5500_ERR_TRANSIENT;
+  }
+
+  uint16_t write_pointer = 0;
+  ret_status = w5500_read16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
+                            &write_pointer);
+  if (ret_status != W5500_OK) {
+    *sent = 0;
+    return ret_status;
+  }
+
+  spi_frame_t frame = {
+      .tx_data = tx_data, .data_len = tx_length, .is_read = false};
+  ret_status = w5500_transfer(write_pointer, _TX(socket->number), &frame);
+  if (ret_status != W5500_OK) {
+    *sent = 0;
+    return ret_status;
+  }
+
+  frame.tx_data = dst_ip;
+  frame.data_len = 4;
+  frame.is_read = false;
+
+  ret_status =
+      w5500_transfer(SOCKET_DIPR, W5500_BSB_SOCK_REG(socket->number), &frame);
+  if (ret_status != W5500_OK) {
+    *sent = 0;
+    return ret_status;
+  }
+  ret_status =
+      w5500_write16(SOCKET_DPORT, W5500_BSB_SOCK_REG(socket->number), dst_port);
+  if (ret_status != W5500_OK) {
+    *sent = 0;
+    return ret_status;
+  }
+
+  ret_status = w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
+                             write_pointer + tx_length);
+  if (ret_status != W5500_OK) {
+    *sent = 0;
+    return ret_status;
+  }
+
+  w5500_ir_clear(socket, SOCKET_IR_SENDOK);
+
+  ret_status = w5500_write8(SOCKET_CR, W5500_BSB_SOCK_REG(socket->number),
+                            SOCKET_CMD_SEND);
+  if (ret_status != W5500_OK) {
+    w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
+                  write_pointer);
+    *sent = 0;
+    return ret_status;
+  }
+
+  uint8_t current_cr = SOCKET_CMD_SEND;
+  tries = 0;
+  do {
+    sys_sleep(1);
+    ret_status =
+        w5500_read8(SOCKET_CR, W5500_BSB_SOCK_REG(socket->number), &current_cr);
+    if (ret_status != W5500_OK && ret_status != W5500_ERR_TRANSIENT) {
+      w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
+                    write_pointer);
+      *sent = 0;
+      return ret_status;
+    }
+  } while (current_cr != 0 && ++tries < 5);
+  if (tries == 5) {
+    w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
+                  write_pointer);
+    *sent = 0;
+    return W5500_ERR_TRANSIENT;
+  }
+
+  uint8_t current_ir = 0;
+  tries = 0;
+  do {
+    sys_sleep(1);
+    ret_status =
+        w5500_read8(SOCKET_IR, W5500_BSB_SOCK_REG(socket->number), &current_ir);
+    if (ret_status != W5500_OK && ret_status != W5500_ERR_TRANSIENT) {
+      w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
+                    write_pointer);
+      *sent = 0;
+      return ret_status;
+    }
+    if (current_ir & SOCKET_IR_TIMEOUT) {
+      w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
+                    write_pointer);
+      w5500_ir_clear(socket, SOCKET_IR_TIMEOUT);
+      *sent = 0;
+      return W5500_ERR_UNREACHABLE;
+    }
+  } while (!(current_ir & SOCKET_IR_SENDOK) && ++tries < 5);
+
+  if (tries == 5) {
+    socket->has_unreaped_send = true;
+  }
+
+  *sent = tx_length;
   return W5500_OK;
 }
