@@ -24,3 +24,13 @@ void *memset(void *dst, int val, uint32_t len) {
   }
   return dst;
 }
+
+void *memcpy(void *dest, const void *src, uint32_t size) {
+  uint8_t *d = (uint8_t *)dest;
+  const uint8_t *s = (const uint8_t *)src;
+  while (size--) {
+    *d++ = *s++;
+  }
+
+  return dest;
+}

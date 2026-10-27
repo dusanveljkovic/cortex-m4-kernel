@@ -32,6 +32,7 @@ source/kernel/net.c \
 source/user/user_main.c \
 source/user/uprintf.c \
 source/user/fpu_test.c \
+source/user/dhcp.c \
 source/drivers/spi.c \
 source/drivers/usart.c \
 source/drivers/usart_driver.c \

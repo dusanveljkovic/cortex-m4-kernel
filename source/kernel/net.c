@@ -25,8 +25,6 @@ void net_task(void *_a) {
   const uint8_t gateway[4] = {192, 168, 0, 1};
   const uint8_t subnet[4] = {255, 255, 255, 0};
   w5500_status_t init_status = w5500_init(mac, ip, gateway, subnet);
-  init_status = w5500_init(mac, ip, gateway, subnet);
-  init_status = w5500_init(mac, ip, gateway, subnet);
 
   while (1) {
     sys_sem_wait(net_posted);
