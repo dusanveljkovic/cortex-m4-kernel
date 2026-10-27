@@ -15,6 +15,7 @@ enum {
   DHCP_OPT_ROUTER = 3,
   DHCP_OPT_TIME_SERVER = 4,
   DHCP_OPT_REQUESTED_IP = 50,
+  DHCP_OPT_LEASE_TIME = 51,
   DHCP_OPT_MESSAGE_TYPE = 53,
   DHCP_OPT_SERVER_ID = 54,
   DHCP_OPT_PARAMETER_REQUEST_LIST = 55,
@@ -75,6 +76,15 @@ typedef struct {
 
   uint8_t requested_bitmap[32];
 } dhcp_msg_t;
+
+typedef struct {
+  uint8_t start_addr[4];
+  uint8_t end_addr[4];
+  uint8_t to_give;
+
+  uint8_t server_id[4];
+  uint32_t lease_time;
+} dhcp_cfg_t;
 
 typedef enum {
   DHCP_OK,

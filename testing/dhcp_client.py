@@ -108,7 +108,7 @@ def build_header(
         "!BBBB4sHH4s4s4s4s16s64s128s",
         op,
         1,
-        8,
+        6,
         0,
         xid,
         0,
@@ -196,7 +196,51 @@ def parse(data):
     overruns the datagram is an error, not a truncation.
     Raise ValueError on a malformed datagram so the caller can print it.
     """
-    raise NotImplementedError
+    data_dict = {}
+    if len(data) < 240 or (data[236:240] != MAGIC_COOKIE):
+        raise ValueError
+
+    data_dict["raw_length"] = len(data)
+    data_dict["raw"] = data
+
+    data_dict["op"] = data[0]
+    data_dict["htype"] = data[1]
+    data_dict["hlen"] = data[2]
+    data_dict["hops"] = data[3]
+
+    data_dict["xid"] = data[4:8]
+    data_dict["secs"] = int.from_bytes(data[8:10], byteorder="big")
+    data_dict["flags"] = int.from_bytes(data[10:12], byteorder="big")
+
+    data_dict["ciaddr"] = f"{data[12]}.{data[13]}.{data[14]}.{data[15]}"
+    data_dict["yiaddr"] = f"{data[16]}.{data[17]}.{data[18]}.{data[19]}"
+    data_dict["siaddr"] = f"{data[20]}.{data[21]}.{data[22]}.{data[23]}"
+    data_dict["giaddr"] = f"{data[24]}.{data[25]}.{data[26]}.{data[27]}"
+
+    data_dict["chaddr"] = data[28:34]
+
+    options_pos = 240
+    options = {}
+    while options_pos + 1 < len(data):
+        code = data[options_pos]
+        if code == 0:
+            options_pos += 1
+            continue
+        if code == 255:
+            break
+        data_len = data[options_pos + 1]
+        options_pos += 2
+        if options_pos + data_len > len(data):
+            raise ValueError
+
+        opt_data = data[options_pos : (options_pos + data_len)]
+        options[code] = opt_data
+
+        options_pos += data_len
+
+    data_dict["opts"] = options
+
+    return data_dict
 
 
 def hexdump(data, limit=64):
@@ -229,7 +273,38 @@ def check_offer(msg, expect):
       - END (0xff) found at or before the end
     Print nothing here; just return the list.
     """
-    raise NotImplementedError
+    failure_strings = []
+    if msg["op"] != BOOTREPLY:
+        failure_strings.append(f"msg op {msg['op']} != BOOTREPLY")
+    if msg["xid"] != expect["xid"]:
+        failure_strings.append(f"xid mismatch {msg['xid']} != {expect['xid']}")
+    if msg["chaddr"][:6] != expect["chaddr"]:
+        failure_strings.append(
+            f"chaddr mismatch {msg['chaddr'][:6]} != {expect['chaddr']}"
+        )
+    if msg["yiaddr"] == "0.0.0.0":
+        failure_strings.append("yiaddr 0.0.0.0")
+    if OPT_LEASE_TIME not in msg["opts"]:
+        failure_strings.append("OPT_LEASE_TIME[51] not present")
+    if OPT_CLIENT_ID not in msg["opts"]:
+        failure_strings.append("OPT_CLIENT_ID[61] not present")
+    if (
+        OPT_CLIENT_ID in msg["opts"]
+        and msg["opts"][OPT_CLIENT_ID] != expect["client_id"]
+    ):
+        failure_strings.append(
+            f"client id mismatch {msg['opts'][OPT_CLIENT_ID]} != {expect['client_id']}"
+        )
+    for t in PARAM_LIST - CANNOT_PROVIDE:
+        if t not in msg["opts"]:
+            failure_strings.append(f"param {t} not in {msg['opts']}")
+    for t in CANNOT_PROVIDE:
+        if t in msg["opts"]:
+            failure_strings.append(f"param {t} in {msg['opts']}")
+    if msg["raw_length"] < 300:
+        failure_strings.append(f"length {msg['raw_length']} < 300")
+
+    return failure_strings
 
 
 def check_ack(msg, expect):
@@ -237,7 +312,12 @@ def check_ack(msg, expect):
 
     TODO: reuse check_offer and extend.
     """
-    raise NotImplementedError
+    failure_strings = check_offer(msg, expect)
+    if msg["yiaddr"] != expect["requested_ip"]:
+        failure_strings.append(
+            f"requested ip mismatch {msg['yiaddr']} != {expect['requested_ip']}"
+        )
+    return failure_strings
 
 
 # --- socket plumbing -------------------------------------------------------
@@ -269,7 +349,10 @@ def parse_type(data):
 
     TODO: walk options, return the message type or None (BOOTP).
     """
-    raise NotImplementedError
+    data_dict = parse(data)
+    if OPT_MESSAGE_TYPE not in data_dict["opts"]:
+        return None
+    return data_dict["opts"][OPT_MESSAGE_TYPE][0]
 
 
 def recv_matching(sock, xid, expect_server_id, timeout):
@@ -282,7 +365,23 @@ def recv_matching(sock, xid, expect_server_id, timeout):
         "offer from <ip> -- not us (router DHCP still on?)" and continue
       - on timeout: return None (the caller decides if that is a failure)
     """
-    raise NotImplementedError
+    sock.settimeout(timeout)
+    while True:
+        try:
+            data, address = sock.recvfrom(1500)
+            data_dict = parse(data)
+            if data_dict["xid"] != xid:
+                print(f"recv xid mismatch {data_dict['xid']} != {xid}")
+                continue
+            if data_dict["opts"][OPT_SERVER_ID] != expect_server_id:
+                print(f"offer from another server {data_dict['opts'][OPT_SERVER_ID]}")
+                continue
+            return data_dict
+        except TimeoutError:
+            return None
+        except ValueError as e:
+            print(e)
+            return None
 
 
 # --- the two runs ----------------------------------------------------------
@@ -302,7 +401,50 @@ def run_happy_path(sock, args):
     A server that never answers and a server that answers wrongly are different
     bugs; keep their failure strings distinguishable.
     """
-    raise NotImplementedError
+    xid = random.randrange(1 << 32)
+    xid = xid.to_bytes(4, byteorder="big")
+    print(xid)
+    chaddr = bytes.fromhex("".join(args.mac.split(":")))
+    print(f"chaddr {chaddr}")
+    client_id = b"\x01" + chaddr
+
+    send(sock, build(DISCOVER, xid, chaddr, client_id))
+
+    data_dict = recv_matching(sock, xid, 0, 10)
+    if data_dict is None:
+        return [f"{RED}no OFFER{RESET}"]
+
+    failure_strings = check_offer(
+        data_dict, {"xid": xid, "chaddr": chaddr, "client_id": client_id}
+    )
+
+    requested_ip = data_dict["yiaddr"]
+
+    send(
+        sock,
+        build(
+            REQUEST,
+            xid,
+            chaddr,
+            client_id,
+            opts={OPT_REQUESTED_IP: requested_ip},
+        ),
+    )
+
+    data_dict = recv_matching(sock, xid, 0, 10)
+    if data_dict is None:
+        return [f"{RED} no back from REQUEST{RESET}"]
+
+    failure_strings += check_ack(
+        data_dict,
+        {
+            "xid": xid,
+            "chaddr": chaddr,
+            "client_id": client_id,
+            "requested_ip": requested_ip,
+        },
+    )
+    return failure_strings
 
 
 def run_negative(sock, args):
@@ -367,26 +509,28 @@ def main():
 
     # print(options)
     xid = bytes.fromhex("deadbeef")
-    print(hexdump(build(REQUEST, xid, mac, mac), limit=300))
-    # failures = []
-    # try:
-    #     failures += run_happy_path(sock, args)
-    #     if args.negative:
-    #         failures += run_negative(sock, args)
-    #     if args.twice:
-    #         failures += run_twice(sock, args)
-    # except KeyboardInterrupt:
-    #     print("\ninterrupted")
-    # finally:
-    #     sock.close()
-    #
-    # print()
-    # if not failures:
-    #     print(f"{GREEN}ALL CHECKS PASSED{RESET}")
-    #     return 0
-    # for f in failures:
-    #     print(f"{RED}FAIL{RESET} {f}")
-    # print(f"\n{RED}{len(failures)} failure(s){RESET}")
+    request = build(REQUEST, xid, mac, mac)
+    print(hexdump(request, limit=300))
+    print(parse(request))
+    failures = []
+    try:
+        failures += run_happy_path(sock, args)
+        if args.negative:
+            failures += run_negative(sock, args)
+        if args.twice:
+            failures += run_twice(sock, args)
+    except KeyboardInterrupt:
+        print("\ninterrupted")
+    finally:
+        sock.close()
+
+    print()
+    if not failures:
+        print(f"{GREEN}ALL CHECKS PASSED{RESET}")
+        return 0
+    for f in failures:
+        print(f"{RED}FAIL{RESET} {f}")
+    print(f"\n{RED}{len(failures)} failure(s){RESET}")
     return 1
 
 

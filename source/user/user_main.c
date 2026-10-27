@@ -88,9 +88,6 @@ void dhcp_msg_print(dhcp_msg_t *msg, uint16_t len, uint8_t *buffer) {
     }
   }
   uprintf("]\r\n");
-  uprintf("OPT[requested]: %x%x%x%x\r\n", msg->requested_bitmap[0],
-          msg->requested_bitmap[1], msg->requested_bitmap[2],
-          msg->requested_bitmap[3]);
 
   if (msg->has_client_id)
     uprintf("OPT[client_id]: %x%x%x%x\r\n", msg->client_id[0],
@@ -121,7 +118,7 @@ void net_test(void) {
 
   socket_t *socket = sys_socket_get(0);
   socket->protocol = UDP;
-  socket->port = 67;
+  socket->port = 6767;
   sys_socket_open(socket, &reply_slot);
   if (reply_slot.status != NET_STATUS_OK) {
     print_net_error(&reply_slot);
@@ -137,7 +134,9 @@ void net_test(void) {
       dhcp_status_t dhcp_status = dhcp_parse(buffer, reply_slot.got, out);
       if (dhcp_status != DHCP_OK)
         print_dhcp_error(dhcp_status);
-      dhcp_msg_print(out, reply_slot.got, buffer);
+      else {
+        dhcp_msg_print(out, reply_slot.got, buffer);
+      }
     }
     if (reply_slot.status != NET_STATUS_OK)
       print_net_error(&reply_slot);

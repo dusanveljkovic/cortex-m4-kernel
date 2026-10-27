@@ -109,7 +109,11 @@ dhcp_status_t dhcp_parse(const uint8_t *buf, uint16_t len, dhcp_msg_t *out) {
 }
 
 dhcp_status_t dhcp_build_offer(const uint8_t *req_raw, const dhcp_msg_t *req,
-                               uint8_t *out, uint16_t cap, uint16_t *out_len) {
+                               const dhcp_cfg_t *cfg, uint8_t *out,
+                               uint16_t cap, uint16_t *out_len) {
+  if (cfg->to_give == 0)
+    return DHCP_ERR_ARG;
+
   memset(out, 0, cap);
   memcpy(out, req_raw, 236);
   // op = BOOTREPLY
@@ -122,11 +126,38 @@ dhcp_status_t dhcp_build_offer(const uint8_t *req_raw, const dhcp_msg_t *req,
   out[8] = 0;
   out[9] = 0;
 
+  // yiaddr
+  out[16] = cfg->end_addr[0];
+  out[17] = cfg->end_addr[1];
+  out[18] = cfg->end_addr[2];
+  out[19] = cfg->end_addr[3] - cfg->to_give;
+
   // magic cookie
   out[236] = 0x63;
   out[237] = 0x82;
   out[238] = 0x53;
   out[239] = 0x63;
+
+  uint16_t curr_pos = 240;
+  out[curr_pos++] = DHCP_OPT_MESSAGE_TYPE;
+  out[curr_pos++] = 1;
+  out[curr_pos++] = DHCP_MSG_OFFER;
+
+  out[curr_pos++] = DHCP_OPT_SERVER_ID;
+  out[curr_pos++] = 4;
+  memcpy(out + curr_pos, cfg->server_id, 4);
+  curr_pos += 4;
+
+  out[curr_pos++] = DHCP_OPT_LEASE_TIME;
+  out[curr_pos++] = 4;
+  out[curr_pos++] = (uint8_t)(cfg->lease_time >> 24);
+  out[curr_pos++] = (uint8_t)(cfg->lease_time >> 16);
+  out[curr_pos++] = (uint8_t)(cfg->lease_time >> 8);
+  out[curr_pos++] = (uint8_t)(cfg->lease_time);
+
+  out[curr_pos++] = DHCP_OPT_CLIENT_ID;
+  out[curr_pos++] = req->client_id_len;
+  memcpy(out + curr_pos, req->client_id, req->client_id_len);
 
   return DHCP_OK;
 }
