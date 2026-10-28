@@ -34,3 +34,14 @@ void *memcpy(void *dest, const void *src, uint32_t size) {
 
   return dest;
 }
+
+int memcmp(const void *s1, const void *s2, uint32_t size) {
+  const uint8_t *p1 = (const uint8_t *)s1;
+  const uint8_t *p2 = (const uint8_t *)s2;
+  for (uint32_t i = 0; i < size; i++) {
+    if (p1[i] != p2[i]) {
+      return p1[i] - p2[i];
+    }
+  }
+  return 0;
+}

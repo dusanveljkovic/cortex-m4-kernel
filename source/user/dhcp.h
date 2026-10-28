@@ -14,6 +14,8 @@ enum {
   DHCP_OPT_TIME_OFFSET = 2,
   DHCP_OPT_ROUTER = 3,
   DHCP_OPT_TIME_SERVER = 4,
+  DHCP_OPT_DNS = 6,
+  DHCP_OPT_BROADCAST_ADDR = 28,
   DHCP_OPT_REQUESTED_IP = 50,
   DHCP_OPT_LEASE_TIME = 51,
   DHCP_OPT_MESSAGE_TYPE = 53,
@@ -39,6 +41,7 @@ enum {
 typedef uint8_t dhcp_msg_type_t;
 
 #define CID_CAP 16
+#define LEASE_KEY_CAP 16
 
 typedef struct {
   dhcp_op_t op;
@@ -75,6 +78,9 @@ typedef struct {
   bool has_client_id;
 
   uint8_t requested_bitmap[32];
+
+  uint8_t lease_key[LEASE_KEY_CAP];
+  uint8_t lease_key_length;
 } dhcp_msg_t;
 
 typedef struct {
@@ -84,6 +90,11 @@ typedef struct {
 
   uint8_t server_id[4];
   uint32_t lease_time;
+
+  uint8_t subnet_mask[4];
+  uint8_t router[4];
+  uint8_t dns[4];
+  uint8_t broadcast_addr[4];
 } dhcp_cfg_t;
 
 typedef enum {
@@ -96,5 +107,8 @@ typedef enum {
 } dhcp_status_t;
 
 dhcp_status_t dhcp_parse(const uint8_t *buf, uint16_t len, dhcp_msg_t *out);
-
+dhcp_status_t dhcp_build_offer(const uint8_t *req_raw, const dhcp_msg_t *req,
+                               const dhcp_cfg_t *cfg, uint8_t *out,
+                               uint16_t cap, uint16_t *out_len);
+void dhcp_task(void *args);
 #endif // !_DHCP

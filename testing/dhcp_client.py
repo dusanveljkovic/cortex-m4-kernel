@@ -140,7 +140,7 @@ def build_options(options):
         ret = ret + b"".join(
             [
                 opt_number.to_bytes(1),
-                len(opt_val).to_bytes(1),
+                len(val).to_bytes(1),
                 val,
             ]
         )
@@ -175,6 +175,8 @@ def build(kind, xid, chaddr, client_id, **fields):
             OPT_VENDOR_CLASS: b"udhcp 1.19.3",
             OPT_CLIENT_ID: client_id,
             OPT_PARAM_LIST: PARAM_LIST,
+            OPT_REQUESTED_IP: fields["opts"][OPT_REQUESTED_IP],
+            OPT_SERVER_ID: fields["opts"][OPT_SERVER_ID],
         }
     option_bytes = build_options(options)
     header_bytes = build_header(BOOTREQUEST, xid, chaddr)
@@ -198,7 +200,7 @@ def parse(data):
     """
     data_dict = {}
     if len(data) < 240 or (data[236:240] != MAGIC_COOKIE):
-        raise ValueError
+        return None
 
     data_dict["raw_length"] = len(data)
     data_dict["raw"] = data
@@ -231,7 +233,7 @@ def parse(data):
         data_len = data[options_pos + 1]
         options_pos += 2
         if options_pos + data_len > len(data):
-            raise ValueError
+            return None
 
         opt_data = data[options_pos : (options_pos + data_len)]
         options[code] = opt_data
@@ -284,6 +286,16 @@ def check_offer(msg, expect):
         )
     if msg["yiaddr"] == "0.0.0.0":
         failure_strings.append("yiaddr 0.0.0.0")
+    if OPT_SERVER_ID not in msg["opts"]:
+        failure_strings.append("OPT_SERVER_ID[54] not present")
+    if (
+        OPT_SERVER_ID in msg["opts"]
+        and msg["opts"][OPT_SERVER_ID] != expect["server_id"]
+    ):
+        failure_strings.append(
+            f"server id mismatch {msg['opts'][OPT_SERVER_ID]} != {expect['server_id']}"
+        )
+
     if OPT_LEASE_TIME not in msg["opts"]:
         failure_strings.append("OPT_LEASE_TIME[51] not present")
     if OPT_CLIENT_ID not in msg["opts"]:
@@ -295,7 +307,7 @@ def check_offer(msg, expect):
         failure_strings.append(
             f"client id mismatch {msg['opts'][OPT_CLIENT_ID]} != {expect['client_id']}"
         )
-    for t in PARAM_LIST - CANNOT_PROVIDE:
+    for t in sorted(set(PARAM_LIST) - set(CANNOT_PROVIDE)):
         if t not in msg["opts"]:
             failure_strings.append(f"param {t} not in {msg['opts']}")
     for t in CANNOT_PROVIDE:
@@ -313,7 +325,7 @@ def check_ack(msg, expect):
     TODO: reuse check_offer and extend.
     """
     failure_strings = check_offer(msg, expect)
-    if msg["yiaddr"] != expect["requested_ip"]:
+    if socket.inet_aton(msg["yiaddr"]) != expect["requested_ip"]:
         failure_strings.append(
             f"requested ip mismatch {msg['yiaddr']} != {expect['requested_ip']}"
         )
@@ -350,7 +362,7 @@ def parse_type(data):
     TODO: walk options, return the message type or None (BOOTP).
     """
     data_dict = parse(data)
-    if OPT_MESSAGE_TYPE not in data_dict["opts"]:
+    if data_dict is None or OPT_MESSAGE_TYPE not in data_dict["opts"]:
         return None
     return data_dict["opts"][OPT_MESSAGE_TYPE][0]
 
@@ -403,22 +415,29 @@ def run_happy_path(sock, args):
     """
     xid = random.randrange(1 << 32)
     xid = xid.to_bytes(4, byteorder="big")
-    print(xid)
     chaddr = bytes.fromhex("".join(args.mac.split(":")))
-    print(f"chaddr {chaddr}")
     client_id = b"\x01" + chaddr
+
+    server_id = socket.inet_aton(args.server)
 
     send(sock, build(DISCOVER, xid, chaddr, client_id))
 
-    data_dict = recv_matching(sock, xid, 0, 10)
+    data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
         return [f"{RED}no OFFER{RESET}"]
 
     failure_strings = check_offer(
-        data_dict, {"xid": xid, "chaddr": chaddr, "client_id": client_id}
+        data_dict,
+        {
+            "xid": xid,
+            "chaddr": chaddr,
+            "client_id": client_id,
+            "server_id": server_id,
+        },
     )
 
     requested_ip = data_dict["yiaddr"]
+    requested_ip = socket.inet_aton(requested_ip)
 
     send(
         sock,
@@ -427,11 +446,11 @@ def run_happy_path(sock, args):
             xid,
             chaddr,
             client_id,
-            opts={OPT_REQUESTED_IP: requested_ip},
+            opts={OPT_REQUESTED_IP: requested_ip, OPT_SERVER_ID: server_id},
         ),
     )
 
-    data_dict = recv_matching(sock, xid, 0, 10)
+    data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
         return [f"{RED} no back from REQUEST{RESET}"]
 
@@ -441,6 +460,7 @@ def run_happy_path(sock, args):
             "xid": xid,
             "chaddr": chaddr,
             "client_id": client_id,
+            "server_id": server_id,
             "requested_ip": requested_ip,
         },
     )
@@ -460,7 +480,88 @@ def run_negative(sock, args):
     garbage is indistinguishable from one that ignored it until you ask it a
     question it must answer.
     """
-    raise NotImplementedError
+
+    server_id = socket.inet_aton(args.server)
+    xid = random.randrange(1 << 32)
+    pkt_without_options = struct.pack(
+        "!BBBBIHH4s4s4s4s16s64s128s",
+        1,
+        1,
+        6,
+        0,  # op=BOOTREQUEST, htype, hlen, hops
+        xid,
+        0,
+        0x8000,  # xid -> buffer[4:8], secs, broadcast flag
+        b"\0" * 4,
+        b"\0" * 4,
+        b"\0" * 4,
+        b"\0" * 4,  # ciaddr yiaddr siaddr giaddr
+        bytes.fromhex("eedfeeffeeff") + b"\0" * 10,  # chaddr -> buffer[28:34]
+        b"\0" * 64,
+        b"\0" * 128,  # sname, file
+    ) + bytes(
+        [99, 130, 83, 99]
+    )  # magic cookie at 236
+    send(sock, pkt_without_options)
+    failure_strings = []
+    if recv_matching(sock, xid, server_id, 1) is not None:
+        failure_strings.append("Server replied to a message with no option 53")
+
+    pkt_wrong_magic = struct.pack(
+        "!BBBBIHH4s4s4s4s16s64s128s",
+        1,
+        1,
+        6,
+        0,  # op=BOOTREQUEST, htype, hlen, hops
+        xid,
+        0,
+        0x8000,  # xid -> buffer[4:8], secs, broadcast flag
+        b"\0" * 4,
+        b"\0" * 4,
+        b"\0" * 4,
+        b"\0" * 4,  # ciaddr yiaddr siaddr giaddr
+        bytes.fromhex("eedfeeffeeff") + b"\0" * 10,  # chaddr -> buffer[28:34]
+        b"\0" * 64,
+        b"\0" * 128,  # sname, file
+    ) + bytes(
+        [00, 11, 22, 33]
+    )  # magic cookie at 236
+    send(sock, pkt_wrong_magic)
+    if recv_matching(sock, xid, server_id, 1) is not None:
+        failure_strings.append("Server replied to a message with wrong magic cookie")
+
+    small_msg = b"\xef" * 200
+    send(sock, small_msg)
+    if recv_matching(sock, xid, server_id, 1) is not None:
+        failure_strings.append("Server replied to a message with size 200")
+
+    malformed_msg = pkt_without_options + b"\53"
+    send(sock, malformed_msg)
+    if recv_matching(sock, xid, server_id, 1) is not None:
+        failure_strings.append("Server replied to a malformed message")
+
+    xid = random.randrange(1 << 32)
+    xid = xid.to_bytes(4, byteorder="big")
+    chaddr = bytes.fromhex("".join(args.mac.split(":")))
+    client_id = b"\x01" + chaddr
+
+    send(sock, build(DISCOVER, xid, chaddr, client_id))
+
+    data_dict = recv_matching(sock, xid, server_id, args.timeout)
+    if data_dict is None:
+        failure_strings.append(f"{RED}no OFFER{RESET}")
+
+    failure_strings_2 = check_offer(
+        data_dict,
+        {
+            "xid": xid,
+            "chaddr": chaddr,
+            "client_id": client_id,
+            "server_id": server_id,
+        },
+    )
+    failure_strings = failure_strings + failure_strings_2
+    return failure_strings
 
 
 def run_twice(sock, args):
@@ -469,7 +570,46 @@ def run_twice(sock, args):
     TODO: the I3 check. Requires the server to remember, so it will fail
     until the lease table exists. Failure here is informative, not fatal.
     """
-    raise NotImplementedError
+    xid = random.randrange(1 << 32)
+    xid = xid.to_bytes(4, byteorder="big")
+    chaddr = bytes.fromhex("".join(args.mac.split(":")))
+    client_id = b"\x01" + chaddr
+    server_id = socket.inet_aton(args.server)
+    failure_strings = []
+
+    send(sock, build(DISCOVER, xid, chaddr, client_id))
+
+    data_dict = recv_matching(sock, xid, server_id, args.timeout)
+    if data_dict is None:
+        return [f"{RED}no OFFER{RESET}"]
+
+    first_yiaddr = data_dict["yiaddr"]
+
+    send(sock, build(DISCOVER, xid, chaddr, client_id))
+
+    data_dict = recv_matching(sock, xid, server_id, args.timeout)
+    if data_dict is None:
+        return [f"{RED}no OFFER{RESET}"]
+
+    second_yiaddr = data_dict["yiaddr"]
+    if first_yiaddr != second_yiaddr:
+        failure_strings.append(
+            f"Yiaddr mismatch on same client-id dicsover {first_yiaddr} != {second_yiaddr}"
+        )
+
+    send(sock, build(DISCOVER, xid, chaddr, b"\x02" + chaddr))
+
+    data_dict = recv_matching(sock, xid, server_id, args.timeout)
+    if data_dict is None:
+        return [f"{RED}no OFFER{RESET}"]
+    third_yiaddr = data_dict["yiaddr"]
+
+    if first_yiaddr == third_yiaddr:
+        failure_strings.append(
+            f"Yiaddr match on different client-id dicsover {first_yiaddr} == {third_yiaddr}"
+        )
+
+    return failure_strings
 
 
 # --- entry point -----------------------------------------------------------
@@ -507,11 +647,6 @@ def main():
         f"testing server {args.server}\n"
     )
 
-    # print(options)
-    xid = bytes.fromhex("deadbeef")
-    request = build(REQUEST, xid, mac, mac)
-    print(hexdump(request, limit=300))
-    print(parse(request))
     failures = []
     try:
         failures += run_happy_path(sock, args)
