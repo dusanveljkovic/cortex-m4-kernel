@@ -1,4 +1,5 @@
 #include "dhcp.h"
+#include "../../include/flash.h"
 #include "../../include/net.h"
 #include "../../include/syscall.h"
 #include "../../include/utils.h"
@@ -201,7 +202,6 @@ dhcp_build_reply(const uint8_t *req_raw, const dhcp_msg_t *req,
   out[17] = yiaddr[1];
   out[18] = yiaddr[2];
   out[19] = yiaddr[3];
-  uprintf("yiaddr %d.%d.%d.%d\r\n", out[0], out[1], out[2], out[3]);
 
   // magic cookie
   out[236] = 0x63;
@@ -389,6 +389,15 @@ static dhcp_status_t chose_address(lease_table_t *table, uint8_t *key,
   return DHCP_OK;
 }
 
+static void write_record(uint8_t record[32]) {
+  flash_append_journal((uint32_t *)record, 8);
+}
+
+static void serialize_record(lease_slot_t *slot, uint8_t addr[4],
+                             uint8_t buffer[32]);
+static void load_lease_table(lease_table_t *table, bool *should_compact);
+static void journal_compact(lease_table_t *table);
+
 void dhcp_task(void *args) {
   uprintf("[dhcp] Starting server...\r\n");
   dhcp_cfg_t *cfg = (dhcp_cfg_t *)args;
@@ -410,6 +419,11 @@ void dhcp_task(void *args) {
   memset(all_slots, 0, lease_table_size * sizeof(lease_slot_t));
   lease_table_t lease_table = {.slots = all_slots, .size = lease_table_size};
   memcpy(lease_table.start_addr, cfg->start_addr, 4);
+
+  bool should_compact = false;
+  load_lease_table(&lease_table, &should_compact);
+  if (should_compact)
+    journal_compact(&lease_table);
 
   uint16_t net_buffer_size = 1500;
   uint8_t *net_buffer =
@@ -497,6 +511,10 @@ void dhcp_task(void *args) {
             memcmp(slot->key, received_msg->lease_key, slot->key_len) == 0) {
           slot->state = LEASE_ST_BOUND;
 
+          uint8_t record[32];
+          serialize_record(slot, requested_addr, record);
+          write_record(record);
+
           uint16_t ack_length = 0;
           dhcp_status = dhcp_build_reply(net_buffer, received_msg, DHCP_MSG_ACK,
                                          cfg, requested_addr, dhcp_reply_buffer,
@@ -532,29 +550,128 @@ void dhcp_task(void *args) {
   sys_free(net_buffer);
   sys_free(dhcp_reply_buffer);
   sys_free(received_msg);
-  // uint8_t *send_buffer = (uint8_t *)sys_malloc(300 * sizeof(uint8_t));
-  // uint8_t count = 0;
-  //
-  // // while (true) {
-  // memset(send_buffer, count++, 300);
-  // uprintf("[user]sent buffer: \r\n");
-  // for (int i = 0; i < 300; i++) {
-  //   uprintf("%x ", send_buffer[i]);
-  // }
-  // uprintf("\r\n");
-  // net_send_args_t args = {.tx_data = send_buffer,
-  //                         .tx_length = 300,
-  //                         .dst_ip = {192, 168, 0, 200},
-  //                         .dst_port = 6767};
-  // sys_net_send(socket, &args, &reply_slot);
-  // print_net_error(&reply_slot);
-  // sys_sleep(2000);
-  // net_send_args_t args2 = {.tx_data = send_buffer,
-  //                          .tx_length = 300,
-  //                          .dst_ip = {255, 255, 255, 255},
-  //                          .dst_port = 6767};
-  // sys_net_send(socket, &args2, &reply_slot);
-  // print_net_error(&reply_slot);
-  // sys_sleep(2000);
-  // }
+}
+
+#define JOURNAL_VER 1
+static uint8_t header_magic[4] = "LHDR";
+static uint8_t record_magic[4] = "LSLT";
+
+static void serialize_record(lease_slot_t *slot, uint8_t addr[4],
+                             uint8_t buffer[32]) {
+  memcpy(buffer, record_magic, 4);
+
+  buffer[4] = slot->state;
+
+  buffer[5] = slot->key_len;
+
+  buffer[6] = addr[0];
+  buffer[7] = addr[1];
+  buffer[8] = addr[2];
+  buffer[9] = addr[3];
+
+  buffer[10] = slot->expires_at;
+  buffer[11] = slot->expires_at >> 8;
+  buffer[12] = slot->expires_at >> 16;
+  buffer[13] = slot->expires_at >> 24;
+
+  memcpy(buffer + 14, slot->key, 16);
+
+  buffer[31] = crc32(buffer, 31);
+}
+
+static void journal_compact(lease_table_t *table) {
+  flash_journal_reset_write_pointer();
+  uint8_t buffer[16];
+
+  // serialize header
+  // u32 magic = "LHDR"
+  // u16 version = 1
+  // u16 rec_size = 16
+  // u32 base = table->start_addr
+  // u8 size = table->size;
+  // u8 crc32
+  // pad to 16 bytes
+  memcpy(buffer, header_magic, 4);
+
+  buffer[4] = 0;
+  buffer[5] = JOURNAL_VER;
+
+  buffer[6] = 0;
+  buffer[7] = 32;
+
+  buffer[8] = table->start_addr[0];
+  buffer[9] = table->start_addr[1];
+  buffer[10] = table->start_addr[2];
+  buffer[11] = table->start_addr[3];
+
+  buffer[12] = table->size;
+
+  buffer[13] = crc32(buffer, 12);
+  buffer[14] = 0;
+  buffer[15] = 0;
+
+  flash_program_journal((uint32_t *)buffer, 4);
+
+  for (int i = 0; i < table->size; i++) {
+    if ((table->slots + i)->state == LEASE_ST_FREE)
+      continue;
+    uint8_t slot_buffer[32];
+    uint8_t addr[4];
+    memcpy(addr, table->start_addr, 4);
+    addr[3] += i;
+    serialize_record(table->slots + i, addr, slot_buffer);
+    write_record(slot_buffer);
+  }
+}
+
+static void load_lease_table(lease_table_t *table, bool *should_compact) {
+  uint8_t header_buffer[16];
+  *should_compact = false;
+  flash_read_journal((uint32_t *)header_buffer, 4);
+  for (int i = 0; i < 16; i++) {
+    uprintf("%x ", header_buffer[i]);
+  }
+  uprintf("\r\n");
+
+  if (memcmp(header_buffer, header_magic, 4) != 0 || header_buffer[4] != 0 ||
+      header_buffer[5] != JOURNAL_VER || header_buffer[6] != 0 ||
+      header_buffer[7] != 32 ||
+      memcmp(header_buffer + 8, table->start_addr, 4) != 0 ||
+      header_buffer[12] != table->size) {
+    *should_compact = true;
+    flash_journal_reset_read_pointer();
+    uprintf("HERE\r\n");
+    return;
+  }
+
+  int pom = 0;
+
+  while (true) {
+    uint8_t slot_buffer[32];
+    flash_read_journal((uint32_t *)slot_buffer, 8);
+    for (int i = 0; i < 32; i++)
+      uprintf("%x ", slot_buffer[i]);
+    uprintf("\r\n");
+
+    if (memcmp(slot_buffer, record_magic, 4) != 0) {
+      pom = -8;
+      break;
+    }
+
+    uint8_t crc = crc32(slot_buffer, 31);
+    uprintf("crc %d %d\r\n", crc, slot_buffer[31]);
+    if (crc != slot_buffer[31]) {
+      *should_compact = true;
+    }
+
+    uint8_t idx = slot_buffer[9] - table->start_addr[3];
+    table->slots[idx].state = slot_buffer[4];
+    table->slots[idx].key_len = slot_buffer[5];
+    table->slots[idx].expires_at = slot_buffer[10] | (slot_buffer[11] >> 8) |
+                                   (slot_buffer[12] >> 16) |
+                                   (slot_buffer[13] >> 24);
+    memcpy(table->slots[idx].key, slot_buffer + 14, 16);
+  };
+
+  flash_journal_set_write_pointer(pom);
 }

@@ -1,6 +1,7 @@
 #include "../../include/cli.h"
 #include "../../include/clock.h"
 #include "../../include/console.h"
+#include "../../include/flash.h"
 #include "../../include/fpu.h"
 #include "../../include/heap.h"
 #include "../../include/kprintf.h"

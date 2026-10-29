@@ -12,6 +12,7 @@ source/kernel/sv_call_handler.s
 SOURCE_C_LIST = \
 source/kernel/arm.c \
 source/kernel/main.c \
+source/kernel/flash.c \
 source/kernel/debug_handlers.c \
 source/kernel/systick.c \
 source/kernel/scheduler.c \

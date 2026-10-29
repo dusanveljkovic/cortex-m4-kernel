@@ -2,7 +2,7 @@ _main_stack_pointer_value = 0x20020000;
 
 MEMORY 
 {
-  FLASH(rx) : ORIGIN = 0x08000000, LENGTH = 512K
+  FLASH(rx) : ORIGIN = 0x08000000, LENGTH = 48K
   SRAM(rwx) : ORIGIN = 0x20000000, LENGTH = 128K
 }
 
