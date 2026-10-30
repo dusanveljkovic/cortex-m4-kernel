@@ -1,8 +1,8 @@
-#include "spi.h"
-#include "../../include/gpio.h"
-#include "../../include/rcc.h"
-#include "../../include/semaphore.h"
-#include "../../include/syscall.h"
+#include "../../include/drivers/spi.h"
+#include "../../include/kernel/gpio.h"
+#include "../../include/kernel/rcc.h"
+#include "../../include/kernel/semaphore.h"
+#include "../../include/kernel/syscall.h"
 
 #define SPI_SPIN_LIMIT 100
 

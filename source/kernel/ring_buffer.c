@@ -1,4 +1,4 @@
-#include "../../include/ring_buffer.h"
+#include "../../include/kernel/ring_buffer.h"
 
 void ring_buffer_put(ring_buffer_t *rb, uint8_t data) {
   rb->buffer[rb->head] = data;

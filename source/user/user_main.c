@@ -1,11 +1,9 @@
-#include "../../include/net.h"
-#include "../../include/semaphore.h"
-#include "../../include/syscall.h"
-#include "../../include/utils.h"
-#include "dhcp.h"
-#include "discover_raw.h"
-#include "fpu_test.h"
-#include "uprintf.h"
+#include "../../include/kernel/net.h"
+#include "../../include/kernel/semaphore.h"
+#include "../../include/kernel/syscall.h"
+#include "../../include/kernel/utils.h"
+#include "../../include/user/dhcp.h"
+#include "../../include/user/uprintf.h"
 #include <stdint.h>
 
 // void parse_test() {

@@ -1,6 +1,6 @@
 #ifndef _STATIC_MEMORY_H
 #define _STATIC_MEMORY_H
-#include "../source/drivers/w5500.h"
+#include "../drivers/w5500.h"
 #include "semaphore.h"
 #include "stdbool.h"
 #include "tcb.h"

@@ -1,4 +1,4 @@
-#include "../include/utils.h"
+#include "../include/kernel/utils.h"
 #include "stdint.h"
 
 int strcmp(const char *s1, const char *s2) {

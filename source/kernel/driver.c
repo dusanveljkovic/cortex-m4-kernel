@@ -1,6 +1,6 @@
-#include "../../include/driver.h"
-#include "../../include/arm.h"
-#include "../../include/utils.h"
+#include "../../include/kernel/driver.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/utils.h"
 
 static const driver_t *registry[DRIVER_MAX];
 

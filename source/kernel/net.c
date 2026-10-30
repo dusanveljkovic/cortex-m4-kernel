@@ -1,9 +1,8 @@
-#include "../../include/net.h"
-#include "../../include/arm.h"
-#include "../../include/kprintf.h"
-#include "../../include/static_memory.h"
-#include "../../include/syscall.h"
-#include "../drivers/w5500.h"
+#include "../../include/kernel/net.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/kprintf.h"
+#include "../../include/kernel/static_memory.h"
+#include "../../include/kernel/syscall.h"
 #include <stdbool.h>
 
 static net_request_t current_req = {0, 0, 0, 0, 0, 0, 0};

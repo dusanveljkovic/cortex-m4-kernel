@@ -1,9 +1,9 @@
-#include "dhcp.h"
-#include "../../include/flash.h"
-#include "../../include/net.h"
-#include "../../include/syscall.h"
-#include "../../include/utils.h"
-#include "uprintf.h"
+#include "../../include/user/dhcp.h"
+#include "../../include/kernel/flash.h"
+#include "../../include/kernel/net.h"
+#include "../../include/kernel/syscall.h"
+#include "../../include/kernel/utils.h"
+#include "../../include/user/uprintf.h"
 
 #define DHCP_DEFAULT_LENGTH 240
 #define DHCP_OPTIONS_START 240

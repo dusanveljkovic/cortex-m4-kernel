@@ -1,7 +1,7 @@
-#include "../../include/sleep.h"
-#include "../../include/arm.h"
-#include "../../include/scheduler.h"
-#include "../../include/systick.h"
+#include "../../include/kernel/sleep.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/scheduler.h"
+#include "../../include/kernel/systick.h"
 
 static tcb_list_t sleep_list = {0, 0};
 

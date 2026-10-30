@@ -1,7 +1,6 @@
-#include "../../include/kprintf.h"
-#include "../../include/console.h"
-#include "../../include/syscall.h"
-#include "../../include/utils.h"
+#include "../../include/kernel/kprintf.h"
+#include "../../include/kernel/console.h"
+#include "../../include/kernel/utils.h"
 #include "stdbool.h"
 
 #define KPRINTF_BUF_SIZE 256

@@ -1,7 +1,7 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
-#include "../source/drivers/w5500.h"
+#include "../drivers/w5500.h"
 #include "net.h"
 #include "semaphore.h"
 #include "stdbool.h"

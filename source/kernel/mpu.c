@@ -1,7 +1,7 @@
-#include "../../include/mpu.h"
-#include "../../include/arm.h"
-#include "../../include/scb.h"
-#include "../../include/tcb.h"
+#include "../../include/kernel/mpu.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/scb.h"
+#include "../../include/kernel/tcb.h"
 
 void mpu_init(void) {
   MPU->CTRL = 0;

@@ -1,6 +1,6 @@
-#include "../../include/systick.h"
-#include "../../include/arm.h"
-#include "../../include/sleep.h"
+#include "../../include/kernel/systick.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/sleep.h"
 
 volatile uint32_t system_ticks;
 

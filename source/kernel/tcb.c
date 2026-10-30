@@ -1,8 +1,8 @@
-#include "../../include/tcb.h"
-#include "../../include/arm.h"
-#include "../../include/scheduler.h"
-#include "../../include/static_memory.h"
-#include "../../include/syscall.h"
+#include "../../include/kernel/tcb.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/scheduler.h"
+#include "../../include/kernel/static_memory.h"
+#include "../../include/kernel/syscall.h"
 
 extern uint32_t *task_stack_init(uint32_t *stack_top, void (*func)(void *),
                                  void *args);

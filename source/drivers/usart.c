@@ -1,10 +1,10 @@
-#include "usart.h"
-#include "../../include/gpio.h"
-#include "../../include/nvic.h"
-#include "../../include/rcc.h"
-#include "../../include/ring_buffer.h"
-#include "../../include/semaphore.h"
-#include "../../include/syscall.h"
+#include "../../include/drivers/usart.h"
+#include "../../include/kernel/gpio.h"
+#include "../../include/kernel/nvic.h"
+#include "../../include/kernel/rcc.h"
+#include "../../include/kernel/ring_buffer.h"
+#include "../../include/kernel/semaphore.h"
+#include "../../include/kernel/syscall.h"
 
 #define RX_BUFFER_SIZE 16
 #define TX_BUFFER_SIZE 16

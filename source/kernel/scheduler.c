@@ -1,6 +1,6 @@
-#include "../../include/scheduler.h"
-#include "../../include/arm.h"
-#include "../../include/tcb.h"
+#include "../../include/kernel/scheduler.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/tcb.h"
 
 static tcb_list_t ready_queue;
 

@@ -1,7 +1,7 @@
 #ifndef _USART_H
 #define _USART_H
 
-#include "../../include/driver.h"
+#include "../kernel/driver.h"
 #include "stdbool.h"
 #include "stdint.h"
 

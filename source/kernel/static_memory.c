@@ -1,9 +1,6 @@
-#include "../../include/static_memory.h"
-#include "../../include/arm.h"
-#include "../../include/tcb.h"
-#include "../drivers/w5500.h"
-#include "stdint.h"
-#include <semaphore.h>
+#include "../../include/kernel/static_memory.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/tcb.h"
 
 #define N_SEMAPHORES 64
 #define N_MUTEXES 64

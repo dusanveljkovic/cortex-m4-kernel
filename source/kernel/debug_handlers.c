@@ -1,5 +1,5 @@
-#include "../../include/kprintf.h"
-#include "../../include/scb.h"
+#include "../../include/kernel/kprintf.h"
+#include "../../include/kernel/scb.h"
 
 void mem_fault_callback(uint32_t *stack) {
   uint32_t cfsr = SCB->CFSR;

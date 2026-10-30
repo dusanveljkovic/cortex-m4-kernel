@@ -1,5 +1,5 @@
-#include "../../include/driver.h"
-#include "usart.h"
+#include "../../include/drivers/usart.h"
+#include "../../include/kernel/driver.h"
 
 static int usart2_drv_init(void) {
   usart2_init();

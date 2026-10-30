@@ -1,5 +1,5 @@
-#include "../../include/flash.h"
-#include "../../include/kprintf.h"
+#include "../../include/kernel/flash.h"
+#include "../../include/kernel/kprintf.h"
 
 #define FLASH_KEYR_1 0x45670123
 #define FLASH_KEYR_2 0xCDEF89AB

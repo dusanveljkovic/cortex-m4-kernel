@@ -1,5 +1,5 @@
-#include "../../include/heap.h"
-#include "../../include/arm.h"
+#include "../../include/kernel/heap.h"
+#include "../../include/kernel/arm.h"
 #include "stdint.h"
 
 #define HEAP_ALIGMENT 8

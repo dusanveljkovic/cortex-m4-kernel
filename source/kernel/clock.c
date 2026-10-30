@@ -1,6 +1,6 @@
-#include "../../include/clock.h"
-#include "../../include/flash.h"
-#include "../../include/rcc.h"
+#include "../../include/kernel/clock.h"
+#include "../../include/kernel/flash.h"
+#include "../../include/kernel/rcc.h"
 
 void clock_init(void) {
   FLASH->ACR = FLASH_ACR_LATENCY_2WS | FLASH_ACR_ICEN | FLASH_ACR_DCEN;

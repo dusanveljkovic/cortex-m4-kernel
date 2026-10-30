@@ -1,9 +1,9 @@
-#include "w5500.h"
-#include "../../include/gpio.h"
-#include "../../include/kprintf.h"
-#include "../../include/rcc.h"
-#include "../../include/syscall.h"
-#include "spi.h"
+#include "../../include/drivers/w5500.h"
+#include "../../include/drivers/spi.h"
+#include "../../include/kernel/gpio.h"
+#include "../../include/kernel/kprintf.h"
+#include "../../include/kernel/rcc.h"
+#include "../../include/kernel/syscall.h"
 
 #define W5500_RESET_PIN 1
 

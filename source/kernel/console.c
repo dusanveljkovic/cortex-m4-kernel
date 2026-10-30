@@ -1,5 +1,5 @@
-#include "../../include/console.h"
-#include "../../include/arm.h"
+#include "../../include/kernel/console.h"
+#include "../../include/kernel/arm.h"
 
 static const driver_t *sinks[CONSOLE_MAX_SINKS];
 

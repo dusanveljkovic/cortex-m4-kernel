@@ -1,6 +1,6 @@
-#include "../../include/semaphore.h"
-#include "../../include/arm.h"
-#include "../../include/scheduler.h"
+#include "../../include/kernel/semaphore.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/scheduler.h"
 
 void semaphore_init(semaphore_t *sem, int count) {
   sem->state = SEM_OPEN;

@@ -1,6 +1,6 @@
-#include "../../include/arm.h"
-#include "../../include/scb.h"
-#include "../../include/scheduler.h"
+#include "../../include/kernel/arm.h"
+#include "../../include/kernel/scb.h"
+#include "../../include/kernel/scheduler.h"
 
 inline void request_context_switch(void) {
   tcb_t *candidate = scheduler_next_task();

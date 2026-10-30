@@ -1,6 +1,6 @@
-#include "uprintf.h"
-#include "../../include/kprintf.h"
-#include "../../include/syscall.h"
+#include "../../include/user/uprintf.h"
+#include "../../include/kernel/kprintf.h"
+#include "../../include/kernel/syscall.h"
 
 static uint32_t clamp_len(int n, uint32_t cap) {
   if (n < 0)
