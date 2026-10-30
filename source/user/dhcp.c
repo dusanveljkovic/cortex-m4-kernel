@@ -345,6 +345,7 @@ dhcp_dest_t dhcp_chose_destination(const dhcp_msg_t *req,
                                    const dhcp_cfg_t *cfg, bool is_nak) {
   dhcp_dest_t dest;
   uint8_t zero_addr[4] = {0, 0, 0, 0};
+  uint8_t broadcast_addr[4] = {255, 255, 255, 255};
   if (memcmp(req->giaddr, zero_addr, 4) != 0) {
     memcpy(dest.ip, req->giaddr, 4);
     dest.port = DHCP_SERVER_PORT;
@@ -354,7 +355,7 @@ dhcp_dest_t dhcp_chose_destination(const dhcp_msg_t *req,
     dest.port = DHCP_CLIENT_PORT;
     dest.use_mac = false;
   } else if (req->broadcast_flag) {
-    memcpy(dest.ip, cfg->broadcast_addr, 4);
+    memcpy(dest.ip, broadcast_addr, 4);
     dest.port = DHCP_CLIENT_PORT;
     dest.use_mac = false;
   } else {
@@ -507,9 +508,12 @@ void dhcp_task(void *args) {
 
         dhcp_dest_t offer_dest =
             dhcp_chose_destination(received_msg, chosen_address, cfg, false);
-        uprintf("[dhcp] chose destination %d.%d.%d.%d:%d\r\n", offer_dest.ip[0],
-                offer_dest.ip[1], offer_dest.ip[2], offer_dest.ip[3],
-                offer_dest.port);
+        uprintf(
+            "[dhcp] chose destination %d.%d.%d.%d:%d %d %x:%x:%x:%x:%x:%x\r\n",
+            offer_dest.ip[0], offer_dest.ip[1], offer_dest.ip[2],
+            offer_dest.ip[3], offer_dest.port, offer_dest.use_mac,
+            offer_dest.mac[0], offer_dest.mac[1], offer_dest.mac[2],
+            offer_dest.mac[3], offer_dest.mac[4], offer_dest.mac[5]);
 
         net_send_args_t offer_args = {.tx_data = dhcp_reply_buffer,
                                       .tx_length = offer_length,
@@ -522,6 +526,7 @@ void dhcp_task(void *args) {
         net_reply_t offer_reply_slot = {0, 0, 0, 0, 0};
         uprintf("[dhcp] Received a discover\r\n");
         uprintf("[dhcp] Sending an offer\r\n");
+        uprintf("dest.use_mac %d\r\n", offer_args.use_mac);
 
         sys_net_send(socket, &offer_args, &offer_reply_slot);
 
@@ -578,7 +583,8 @@ void dhcp_task(void *args) {
                                       .tx_length = ack_length,
                                       .dst_port = ack_dest.port,
                                       .use_mac = ack_dest.use_mac};
-          memcpy(ack_args.dst_ip, ack_dest.ip, 4);
+          memcpy(ack_args.dst_ip, cfg->start_addr, 4);
+          ack_args.dst_ip[3] += slot_idx;
           if (ack_dest.use_mac)
             memcpy(ack_args.mac, ack_dest.mac, 6);
 

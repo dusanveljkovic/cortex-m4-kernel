@@ -9,6 +9,7 @@
 #include "../../include/static_memory.h"
 #include "../../include/systick.h"
 #include "../../include/tcb.h"
+#include "../../include/utils.h"
 #include "../drivers/w5500.h"
 #include <stdint.h>
 
@@ -349,7 +350,9 @@ void svc_dispatch(uintptr_t *frame) {
                          .buffer = send_args->tx_data,
                          .buf_len = send_args->tx_length,
                          .dst_port = send_args->dst_port,
+                         .use_mac = send_args->use_mac,
                          .reply_slot = (net_reply_t *)arg2};
+    memcpy(req.dst_mac, send_args->mac, 6);
     for (int i = 0; i < 4; i++) {
       req.dst_ip[i] = send_args->dst_ip[i];
     }

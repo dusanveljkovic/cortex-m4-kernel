@@ -560,7 +560,7 @@ w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
   }
   if (dst_mac != 0) {
     frame.tx_data = dst_mac;
-    frame.data_len = 4;
+    frame.data_len = 6;
     frame.is_read = false;
 
     ret_status =

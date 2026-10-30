@@ -63,8 +63,12 @@ void net_task(void *_a) {
     }
     case NET_OP_SEND: {
       uint8_t *mac = 0;
-      if (my_req.use_mac)
+      if (my_req.use_mac) {
         mac = my_req.dst_mac;
+        kprintf("Sendind to mac %x:%x...\r\n", mac[0], mac[1]);
+      } else {
+        kprintf("Sending only to ip\r\n");
+      }
       ret_status = w5500_socket_send(my_req.socket, my_req.buffer,
                                      my_req.buf_len, &my_req.reply_slot->got,
                                      my_req.dst_ip, my_req.dst_port, mac);
