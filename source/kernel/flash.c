@@ -31,7 +31,7 @@ static void flash_erase_sector(uint8_t sector_number) {
       break;
   }
 
-  FLASH->CR &= ~(000 << FLASH_CR_SNB_Pos);
+  FLASH->CR &= ~(0b000 << FLASH_CR_SNB_Pos);
   FLASH->CR &= ~FLASH_CR_SER;
   FLASH->CR &= ~FLASH_CR_STRT;
 
@@ -82,7 +82,7 @@ void flash_append_journal(uint32_t *data, uint32_t len) {
 }
 
 void flash_program_journal(uint32_t *data, uint32_t len) {
-  // flash_erase_sector(FLASH_JOURNAL_SECTOR);
+  flash_erase_sector(FLASH_JOURNAL_SECTOR);
   flash_append_journal(data, len);
 }
 

@@ -55,7 +55,6 @@ void user_main(void *arg) {
   dhcp_cfg_t *config = (dhcp_cfg_t *)sys_malloc(sizeof(dhcp_cfg_t));
   dhcp_cfg_t local_cfg = {.start_addr = {192, 168, 0, 110},
                           .end_addr = {192, 168, 0, 200},
-                          .to_give = 90,
                           .server_id = {192, 168, 0, 105},
                           .lease_time = 3600,
                           .subnet_mask = {192, 168, 0, 255},

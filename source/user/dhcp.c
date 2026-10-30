@@ -98,6 +98,7 @@ dhcp_status_t dhcp_parse(const uint8_t *buf, uint16_t len, dhcp_msg_t *out) {
   memcpy(&out->xid, (buf + 4), 4);
   out->secs = buf[9] | (buf[8] << 8);
   out->flags = buf[11] | (buf[10] << 8);
+  out->broadcast_flag = buf[10] & 0x80;
 
   memcpy(out->ciaddr, (buf + 12), 4);
   memcpy(out->yiaddr, (buf + 16), 4);
@@ -327,28 +328,48 @@ void dhcp_msg_print(dhcp_msg_t *msg, uint16_t len, uint8_t *buffer) {
 #define DHCP_SERVER_PORT 6767
 #define DHCP_CLIENT_PORT 6868
 
-typedef enum {
-  LEASE_ST_FREE = 0,
-  LEASE_ST_OFFERED,
-  LEASE_ST_BOUND
-} lease_state_t;
+static bool slot_alive(lease_slot_t *slot, uint32_t now_seconds) {
+  return slot->state != LEASE_ST_FREE &&
+         (int32_t)(now_seconds - slot->expires_at) < 0;
+}
 
 typedef struct {
-  lease_state_t state;
-  uint8_t key[LEASE_KEY_CAP];
-  uint8_t key_len;
-  uint32_t expires_at;
-} lease_slot_t;
+  uint8_t ip[4];
+  uint16_t port;
+  bool use_mac;
+  uint8_t mac[6];
+} dhcp_dest_t;
 
-typedef struct {
-  lease_slot_t *slots;
-  uint8_t size;
-  uint8_t start_addr[4];
-} lease_table_t;
+dhcp_dest_t dhcp_chose_destination(const dhcp_msg_t *req,
+                                   const uint8_t yiaddr[4],
+                                   const dhcp_cfg_t *cfg, bool is_nak) {
+  dhcp_dest_t dest;
+  uint8_t zero_addr[4] = {0, 0, 0, 0};
+  if (memcmp(req->giaddr, zero_addr, 4) != 0) {
+    memcpy(dest.ip, req->giaddr, 4);
+    dest.port = DHCP_SERVER_PORT;
+    dest.use_mac = false;
+  } else if (memcmp(req->ciaddr, zero_addr, 4) != 0) {
+    memcpy(dest.ip, req->ciaddr, 4);
+    dest.port = DHCP_CLIENT_PORT;
+    dest.use_mac = false;
+  } else if (req->broadcast_flag) {
+    memcpy(dest.ip, cfg->broadcast_addr, 4);
+    dest.port = DHCP_CLIENT_PORT;
+    dest.use_mac = false;
+  } else {
+    memcpy(dest.ip, yiaddr, 4);
+    dest.port = DHCP_CLIENT_PORT;
+    dest.use_mac = true;
+    memcpy(dest.mac, req->chaddr, 6);
+  }
+
+  return dest;
+}
 
 static dhcp_status_t chose_address(lease_table_t *table, uint8_t *key,
-                                   uint8_t key_len, uint8_t *chosen_address,
-                                   bool *has_chosen) {
+                                   uint8_t key_len, uint32_t lease_time,
+                                   uint8_t *chosen_address, bool *has_chosen) {
 
   if (table == 0 || key == 0 || key_len == 0 || chosen_address == 0 ||
       key_len > LEASE_KEY_CAP || has_chosen == 0)
@@ -359,7 +380,8 @@ static dhcp_status_t chose_address(lease_table_t *table, uint8_t *key,
   uint8_t first_free_idx;
   for (uint8_t i = 0; i < table->size; i++) {
     lease_slot_t *slot = (table->slots + i);
-    if (first_free == 0 && slot->state == LEASE_ST_FREE) {
+    if (first_free == 0 && (slot->state == LEASE_ST_FREE ||
+                            !slot_alive(slot, sys_uptime() / 1000))) {
       first_free = slot;
       first_free_idx = i;
     }
@@ -372,17 +394,23 @@ static dhcp_status_t chose_address(lease_table_t *table, uint8_t *key,
     break;
   }
   if (found != 0) {
+
+    found->expires_at = sys_uptime() / 1000 + lease_time;
     memcpy(chosen_address, table->start_addr, 4);
     chosen_address[3] += found_idx;
     *has_chosen = true;
+
   } else if (first_free != 0) {
+
     first_free->state = LEASE_ST_OFFERED;
+    first_free->expires_at = sys_uptime() / 1000 + 60;
     memcpy(first_free->key, key, key_len);
     first_free->key_len = key_len;
 
     memcpy(chosen_address, table->start_addr, 4);
     chosen_address[3] += first_free_idx;
     *has_chosen = true;
+
   } else {
     *has_chosen = false;
   }
@@ -397,6 +425,9 @@ static void serialize_record(lease_slot_t *slot, uint8_t addr[4],
                              uint8_t buffer[32]);
 static void load_lease_table(lease_table_t *table, bool *should_compact);
 static void journal_compact(lease_table_t *table);
+
+lease_table_t lease_table = {0, 0};
+lease_table_t *get_dhcp_lease_table(void) { return &lease_table; }
 
 void dhcp_task(void *args) {
   uprintf("[dhcp] Starting server...\r\n");
@@ -417,7 +448,9 @@ void dhcp_task(void *args) {
   lease_slot_t *all_slots =
       (lease_slot_t *)sys_malloc(sizeof(lease_slot_t) * lease_table_size);
   memset(all_slots, 0, lease_table_size * sizeof(lease_slot_t));
-  lease_table_t lease_table = {.slots = all_slots, .size = lease_table_size};
+
+  lease_table.size = lease_table_size;
+  lease_table.slots = all_slots;
   memcpy(lease_table.start_addr, cfg->start_addr, 4);
 
   bool should_compact = false;
@@ -454,8 +487,8 @@ void dhcp_task(void *args) {
         uint8_t chosen_address[4];
         bool has_chosen = false;
         chose_address(&lease_table, received_msg->lease_key,
-                      received_msg->lease_key_length, chosen_address,
-                      &has_chosen);
+                      received_msg->lease_key_length, cfg->lease_time,
+                      chosen_address, &has_chosen);
         if (!has_chosen) {
           uprintf("[dhcp] Didn't chose an address\r\n");
           continue;
@@ -471,10 +504,21 @@ void dhcp_task(void *args) {
           print_dhcp_error(dhcp_status);
           continue;
         }
+
+        dhcp_dest_t offer_dest =
+            dhcp_chose_destination(received_msg, chosen_address, cfg, false);
+        uprintf("[dhcp] chose destination %d.%d.%d.%d:%d\r\n", offer_dest.ip[0],
+                offer_dest.ip[1], offer_dest.ip[2], offer_dest.ip[3],
+                offer_dest.port);
+
         net_send_args_t offer_args = {.tx_data = dhcp_reply_buffer,
                                       .tx_length = offer_length,
-                                      .dst_ip = {255, 255, 255, 255},
-                                      .dst_port = DHCP_CLIENT_PORT};
+                                      .dst_port = offer_dest.port,
+                                      .use_mac = offer_dest.use_mac};
+        memcpy(offer_args.dst_ip, offer_dest.ip, 4);
+        if (offer_dest.use_mac)
+          memcpy(offer_args.mac, offer_dest.mac, 6);
+
         net_reply_t offer_reply_slot = {0, 0, 0, 0, 0};
         uprintf("[dhcp] Received a discover\r\n");
         uprintf("[dhcp] Sending an offer\r\n");
@@ -506,10 +550,13 @@ void dhcp_task(void *args) {
         if (slot_idx < 0 || slot_idx >= lease_table.size)
           continue;
         lease_slot_t *slot = (lease_table.slots + slot_idx);
-        if (slot->state != LEASE_ST_FREE &&
+        uprintf("slot_idx %d, %d", slot_idx,
+                slot_alive(slot, sys_uptime() / 1000));
+        if (slot_alive(slot, sys_uptime() / 1000) &&
             slot->key_len == received_msg->lease_key_length &&
             memcmp(slot->key, received_msg->lease_key, slot->key_len) == 0) {
           slot->state = LEASE_ST_BOUND;
+          slot->expires_at = sys_uptime() / 1000 + cfg->lease_time;
 
           uint8_t record[32];
           serialize_record(slot, requested_addr, record);
@@ -524,14 +571,21 @@ void dhcp_task(void *args) {
             print_dhcp_error(dhcp_status);
             continue;
           }
-          net_send_args_t offer_args = {.tx_data = dhcp_reply_buffer,
-                                        .tx_length = ack_length,
-                                        .dst_ip = {255, 255, 255, 255},
-                                        .dst_port = DHCP_CLIENT_PORT};
+          dhcp_dest_t ack_dest = dhcp_chose_destination(
+              received_msg, received_msg->yiaddr, cfg, false);
+
+          net_send_args_t ack_args = {.tx_data = dhcp_reply_buffer,
+                                      .tx_length = ack_length,
+                                      .dst_port = ack_dest.port,
+                                      .use_mac = ack_dest.use_mac};
+          memcpy(ack_args.dst_ip, ack_dest.ip, 4);
+          if (ack_dest.use_mac)
+            memcpy(ack_args.mac, ack_dest.mac, 6);
+
           net_reply_t offer_reply_slot = {0, 0, 0, 0, 0};
           uprintf("[dhcp] Sending an ACK\r\n");
 
-          sys_net_send(socket, &offer_args, &offer_reply_slot);
+          sys_net_send(socket, &ack_args, &offer_reply_slot);
 
           if (offer_reply_slot.status != NET_STATUS_OK) {
             uprintf("[dhcp][!] Couldn't send an ACK\r\n");
@@ -558,6 +612,7 @@ static uint8_t record_magic[4] = "LSLT";
 
 static void serialize_record(lease_slot_t *slot, uint8_t addr[4],
                              uint8_t buffer[32]) {
+  memset(buffer, 0, 32);
   memcpy(buffer, record_magic, 4);
 
   buffer[4] = slot->state;
@@ -628,10 +683,6 @@ static void load_lease_table(lease_table_t *table, bool *should_compact) {
   uint8_t header_buffer[16];
   *should_compact = false;
   flash_read_journal((uint32_t *)header_buffer, 4);
-  for (int i = 0; i < 16; i++) {
-    uprintf("%x ", header_buffer[i]);
-  }
-  uprintf("\r\n");
 
   if (memcmp(header_buffer, header_magic, 4) != 0 || header_buffer[4] != 0 ||
       header_buffer[5] != JOURNAL_VER || header_buffer[6] != 0 ||
@@ -640,7 +691,6 @@ static void load_lease_table(lease_table_t *table, bool *should_compact) {
       header_buffer[12] != table->size) {
     *should_compact = true;
     flash_journal_reset_read_pointer();
-    uprintf("HERE\r\n");
     return;
   }
 
@@ -649,9 +699,6 @@ static void load_lease_table(lease_table_t *table, bool *should_compact) {
   while (true) {
     uint8_t slot_buffer[32];
     flash_read_journal((uint32_t *)slot_buffer, 8);
-    for (int i = 0; i < 32; i++)
-      uprintf("%x ", slot_buffer[i]);
-    uprintf("\r\n");
 
     if (memcmp(slot_buffer, record_magic, 4) != 0) {
       pom = -8;
@@ -659,17 +706,17 @@ static void load_lease_table(lease_table_t *table, bool *should_compact) {
     }
 
     uint8_t crc = crc32(slot_buffer, 31);
-    uprintf("crc %d %d\r\n", crc, slot_buffer[31]);
     if (crc != slot_buffer[31]) {
       *should_compact = true;
+      continue;
     }
 
     uint8_t idx = slot_buffer[9] - table->start_addr[3];
     table->slots[idx].state = slot_buffer[4];
     table->slots[idx].key_len = slot_buffer[5];
-    table->slots[idx].expires_at = slot_buffer[10] | (slot_buffer[11] >> 8) |
-                                   (slot_buffer[12] >> 16) |
-                                   (slot_buffer[13] >> 24);
+    table->slots[idx].expires_at = slot_buffer[10] | (slot_buffer[11] << 8) |
+                                   (slot_buffer[12] << 16) |
+                                   (slot_buffer[13] << 24);
     memcpy(table->slots[idx].key, slot_buffer + 14, 16);
   };
 

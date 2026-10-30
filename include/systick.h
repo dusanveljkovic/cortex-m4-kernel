@@ -2,6 +2,8 @@
 #define _SYSTICK_H
 #include <stdint.h>
 
+extern volatile uint32_t system_ticks;
+
 typedef struct {
   uint32_t CTRL;
   uint32_t LOAD;

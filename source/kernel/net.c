@@ -62,9 +62,12 @@ void net_task(void *_a) {
       break;
     }
     case NET_OP_SEND: {
+      uint8_t *mac = 0;
+      if (my_req.use_mac)
+        mac = my_req.dst_mac;
       ret_status = w5500_socket_send(my_req.socket, my_req.buffer,
                                      my_req.buf_len, &my_req.reply_slot->got,
-                                     my_req.dst_ip, my_req.dst_port);
+                                     my_req.dst_ip, my_req.dst_port, mac);
       break;
     }
     case NET_OP_SOCKET_CLOSE: {

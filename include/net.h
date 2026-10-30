@@ -45,6 +45,9 @@ typedef struct {
 
   uint8_t dst_ip[4];
   uint16_t dst_port;
+
+  uint8_t dst_mac[6];
+  bool use_mac;
 } net_request_t;
 
 void net_send_request(net_request_t *req);

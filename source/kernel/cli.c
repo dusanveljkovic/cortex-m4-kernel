@@ -6,15 +6,15 @@
 #include "../../include/scb.h"
 #include "../../include/static_memory.h"
 #include "../../include/syscall.h"
+#include "../../include/systick.h"
 #include "../../include/utils.h"
+#include "../user/dhcp.h"
 #include "stdint.h"
 
 #define CLI_BUFFER_SIZE 128
 
 static char cli_buffer[CLI_BUFFER_SIZE] = {0};
 static uint16_t cli_pos = 0;
-
-extern uint32_t system_ticks;
 
 typedef void (*cli_command_fn)(int argc, char **argv);
 
@@ -36,6 +36,8 @@ void cli_cmd_link(int argc, char **argv);
 
 void cli_cmd_spioff(int argc, char **argv);
 
+void cli_cmd_leasetable(int argc, char **argv);
+
 void cli_cmd_reboot(int argc, char **argv);
 
 static const cli_command_t commands[] = {
@@ -47,6 +49,7 @@ static const cli_command_t commands[] = {
     {"mutex", "Print mutex owners/waiters", cli_cmd_mutex},
     {"link", "Print w5500 link status", cli_cmd_link},
     {"spioff", "Turns spi off (used for testing)", cli_cmd_spioff},
+    {"leasetable", "Print DHCP lease table", cli_cmd_leasetable},
     {"reboot", "Reboot the MCU", cli_cmd_reboot},
 };
 
@@ -230,6 +233,32 @@ void cli_cmd_link(int argc, char **argv) {
 void cli_cmd_spioff(int argc, char **argv) {
   SPI1->CR1 &= ~SPI_CR1_SPE;
   kprintf("Spi turned off\r\n");
+}
+
+void cli_cmd_leasetable(int argc, char **argv) {
+  kprintf("DHCP lease table: \r\n");
+  lease_table_t *table = get_dhcp_lease_table();
+  if (table->slots == 0 || table->size == 0) {
+    kprintf("------ NOT INITIALIZED ------\r\n");
+  } else {
+    kprintf("State\tAddress\tKey\tExpiry\r\n");
+    kprintf("-------------------------\r\n");
+    for (int i = 0; i < table->size; i++) {
+      lease_slot_t *slot = (table->slots + i);
+      if (slot->state == LEASE_ST_FREE)
+        continue;
+      if (slot->state == LEASE_ST_OFFERED)
+        kprintf("OFFERED\t");
+      if (slot->state == LEASE_ST_BOUND)
+        kprintf("BOUND\t");
+      kprintf("%d.%d.%d.%d\t", table->start_addr[0], table->start_addr[1],
+              table->start_addr[2], table->start_addr[3] + i);
+      for (int j = 0; j < slot->key_len; j++) {
+        kprintf("%x", slot->key[j]);
+      }
+      kprintf("\t%d\r\n", slot->expires_at);
+    }
+  }
 }
 
 __attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {

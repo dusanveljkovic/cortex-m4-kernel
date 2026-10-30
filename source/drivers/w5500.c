@@ -470,7 +470,8 @@ static w5500_status_t w5500_reset_tx_wr(socket_t *socket) {
 
 w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
                                  uint16_t tx_length, uint16_t *sent,
-                                 uint8_t dst_ip[4], uint16_t dst_port) {
+                                 uint8_t dst_ip[4], uint16_t dst_port,
+                                 uint8_t dst_mac[6]) {
   if (socket == 0 || tx_data == 0 || tx_length == 0 || dst_ip == 0 ||
       dst_port == 0 || sent == 0)
     return W5500_ERR_ARG;
@@ -557,6 +558,18 @@ w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
     *sent = 0;
     return ret_status;
   }
+  if (dst_mac != 0) {
+    frame.tx_data = dst_mac;
+    frame.data_len = 4;
+    frame.is_read = false;
+
+    ret_status =
+        w5500_transfer(SOCKET_DHAR, W5500_BSB_SOCK_REG(socket->number), &frame);
+    if (ret_status != W5500_OK) {
+      *sent = 0;
+      return ret_status;
+    }
+  }
 
   ret_status = w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
                              write_pointer + tx_length);
@@ -567,8 +580,10 @@ w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
 
   w5500_ir_clear(socket, SOCKET_IR_SENDOK);
 
-  ret_status = w5500_write8(SOCKET_CR, W5500_BSB_SOCK_REG(socket->number),
-                            SOCKET_CMD_SEND);
+  uint8_t cmd_to_send = dst_mac == 0 ? SOCKET_CMD_SEND : SOCKET_CMD_SEND_MAC;
+
+  ret_status =
+      w5500_write8(SOCKET_CR, W5500_BSB_SOCK_REG(socket->number), cmd_to_send);
   if (ret_status != W5500_OK) {
     w5500_write16(SOCKET_TX_WR, W5500_BSB_SOCK_REG(socket->number),
                   write_pointer);

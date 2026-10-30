@@ -113,6 +113,7 @@ w5500_status_t w5500_socket_recv(socket_t *socket, uint8_t *buffer,
                                  bool *truncated);
 w5500_status_t w5500_socket_send(socket_t *socket, uint8_t *tx_data,
                                  uint16_t tx_length, uint16_t *sent,
-                                 uint8_t dst_ip[4], uint16_t dst_port);
+                                 uint8_t dst_ip[4], uint16_t dst_port,
+                                 uint8_t dst_mac[6]);
 
 #endif

@@ -149,7 +149,7 @@ def build_options(options):
     return ret
 
 
-def build(kind, xid, chaddr, client_id, **fields):
+def build(kind, xid, chaddr, client_id, broadcast_flag, **fields):
     """Full datagram: header + cookie + options, for the message `kind`.
 
     TODO: dispatch on kind.
@@ -179,7 +179,9 @@ def build(kind, xid, chaddr, client_id, **fields):
             OPT_SERVER_ID: fields["opts"][OPT_SERVER_ID],
         }
     option_bytes = build_options(options)
-    header_bytes = build_header(BOOTREQUEST, xid, chaddr)
+    header_bytes = build_header(
+        BOOTREQUEST, xid, chaddr, 0x8000 if broadcast_flag else 0
+    )
     full_bytes = header_bytes + MAGIC_COOKIE + option_bytes
     return full_bytes
 
@@ -420,7 +422,7 @@ def run_happy_path(sock, args):
 
     server_id = socket.inet_aton(args.server)
 
-    send(sock, build(DISCOVER, xid, chaddr, client_id))
+    send(sock, build(DISCOVER, xid, chaddr, client_id, args.bcast))
 
     data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
@@ -446,6 +448,7 @@ def run_happy_path(sock, args):
             xid,
             chaddr,
             client_id,
+            args.bcast,
             opts={OPT_REQUESTED_IP: requested_ip, OPT_SERVER_ID: server_id},
         ),
     )
@@ -545,7 +548,7 @@ def run_negative(sock, args):
     chaddr = bytes.fromhex("".join(args.mac.split(":")))
     client_id = b"\x01" + chaddr
 
-    send(sock, build(DISCOVER, xid, chaddr, client_id))
+    send(sock, build(DISCOVER, xid, chaddr, client_id, args.bcast))
 
     data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
@@ -577,7 +580,7 @@ def run_twice(sock, args):
     server_id = socket.inet_aton(args.server)
     failure_strings = []
 
-    send(sock, build(DISCOVER, xid, chaddr, client_id))
+    send(sock, build(DISCOVER, xid, chaddr, client_id, args.bcast))
 
     data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
@@ -585,7 +588,7 @@ def run_twice(sock, args):
 
     first_yiaddr = data_dict["yiaddr"]
 
-    send(sock, build(DISCOVER, xid, chaddr, client_id))
+    send(sock, build(DISCOVER, xid, chaddr, client_id, args.bcast))
 
     data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
@@ -597,7 +600,7 @@ def run_twice(sock, args):
             f"Yiaddr mismatch on same client-id dicsover {first_yiaddr} != {second_yiaddr}"
         )
 
-    send(sock, build(DISCOVER, xid, chaddr, b"\x02" + chaddr))
+    send(sock, build(DISCOVER, xid, chaddr, b"\x02" + chaddr, args.bcast))
 
     data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
@@ -638,6 +641,7 @@ def main():
     )
     ap.add_argument("--negative", action="store_true", help="run the garbage cases")
     ap.add_argument("--twice", action="store_true", help="run the same-client-id case")
+    ap.add_argument("--bcast", action="store_true", help="set the B flag")
     args = ap.parse_args()
 
     mac = bytes(int(x, 16) for x in args.mac.split(":"))

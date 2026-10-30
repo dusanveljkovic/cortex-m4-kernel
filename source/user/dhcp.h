@@ -53,6 +53,7 @@ typedef struct {
 
   uint16_t secs;
   uint16_t flags;
+  bool broadcast_flag;
 
   uint8_t ciaddr[4]; // client IPv4 address
   uint8_t yiaddr[4]; // IPv4 address that a server assigns
@@ -86,7 +87,6 @@ typedef struct {
 typedef struct {
   uint8_t start_addr[4];
   uint8_t end_addr[4];
-  uint8_t to_give;
 
   uint8_t server_id[4];
   uint32_t lease_time;
@@ -106,9 +106,30 @@ typedef enum {
   DHCP_ERR_MALFORMED,
 } dhcp_status_t;
 
+typedef enum {
+  LEASE_ST_FREE = 0,
+  LEASE_ST_OFFERED,
+  LEASE_ST_BOUND
+} lease_state_t;
+
+typedef struct {
+  lease_state_t state;
+  uint8_t key[LEASE_KEY_CAP];
+  uint8_t key_len;
+  uint32_t expires_at;
+} lease_slot_t;
+
+typedef struct {
+  lease_slot_t *slots;
+  uint8_t size;
+  uint8_t start_addr[4];
+} lease_table_t;
+
 dhcp_status_t dhcp_parse(const uint8_t *buf, uint16_t len, dhcp_msg_t *out);
 dhcp_status_t dhcp_build_offer(const uint8_t *req_raw, const dhcp_msg_t *req,
                                const dhcp_cfg_t *cfg, uint8_t *out,
                                uint16_t cap, uint16_t *out_len);
 void dhcp_task(void *args);
+lease_table_t *get_dhcp_lease_table(void);
+
 #endif // !_DHCP

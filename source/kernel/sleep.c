@@ -1,8 +1,8 @@
 #include "../../include/sleep.h"
 #include "../../include/arm.h"
 #include "../../include/scheduler.h"
+#include "../../include/systick.h"
 
-static uint32_t system_ticks = 0;
 static tcb_list_t sleep_list = {0, 0};
 
 void sleep_queue_push(tcb_list_t *q, tcb_t *task) {
@@ -58,7 +58,6 @@ tcb_t *sleep_queue_pop(tcb_list_t *q) {
 
 void sleep_tick(void) {
   uint32_t irq_state = irq_save();
-  system_ticks++;
 
   tcb_t *to_wakeup = sleep_queue_pop(&sleep_list);
   while (to_wakeup) {

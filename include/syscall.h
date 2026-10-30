@@ -11,6 +11,8 @@
 enum {
   SYS_YIELD = 0,
 
+  SYS_UPTIME,
+
   SYS_MALLOC,
   SYS_CALLOC,
   SYS_FREE,
@@ -44,6 +46,8 @@ enum {
 };
 
 void sys_yield(void);
+
+uint32_t sys_uptime(void);
 
 uintptr_t sys_malloc(uint32_t size);
 uintptr_t sys_calloc(uint32_t count, uint32_t size);
@@ -79,6 +83,8 @@ typedef struct {
   uint16_t tx_length;
   uint8_t dst_ip[4];
   uint16_t dst_port;
+  bool use_mac;
+  uint8_t mac[6];
 } net_send_args_t;
 void sys_net_send(socket_t *socket, net_send_args_t *args,
                   net_reply_t *reply_slot);

@@ -7,6 +7,7 @@
 #include "../../include/semaphore.h"
 #include "../../include/sleep.h"
 #include "../../include/static_memory.h"
+#include "../../include/systick.h"
 #include "../../include/tcb.h"
 #include "../drivers/w5500.h"
 #include <stdint.h>
@@ -26,6 +27,10 @@ static uintptr_t syscall(uint32_t number, uintptr_t a0, uintptr_t a1,
 }
 
 inline void sys_yield(void) { syscall(SYS_YIELD, 0, 0, 0, 0); }
+
+inline uint32_t sys_uptime(void) {
+  return (uint32_t)syscall(SYS_UPTIME, 0, 0, 0, 0);
+};
 
 inline uintptr_t sys_malloc(uint32_t size) {
   return syscall(SYS_MALLOC, (uintptr_t)size, 0, 0, 0);
@@ -142,6 +147,9 @@ void svc_dispatch(uintptr_t *frame) {
   switch (syscall_number) {
   case SYS_YIELD:
     should_yield = 1;
+    break;
+  case SYS_UPTIME:
+    ret = system_ticks;
     break;
   case SYS_MALLOC: {
     ret = (uintptr_t)kmalloc((uint32_t)arg0);
