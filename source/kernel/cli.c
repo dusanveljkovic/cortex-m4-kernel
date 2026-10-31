@@ -251,6 +251,8 @@ void cli_cmd_leasetable(int argc, char **argv) {
         kprintf("OFFERED\t");
       if (slot->state == LEASE_ST_BOUND)
         kprintf("BOUND\t");
+      if (slot->state == LEASE_ST_DECLINED)
+        kprintf("DECLINED\t");
       kprintf("%d.%d.%d.%d\t", table->start_addr[0], table->start_addr[1],
               table->start_addr[2], table->start_addr[3] + i);
       for (int j = 0; j < slot->key_len; j++) {

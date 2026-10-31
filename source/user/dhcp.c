@@ -299,6 +299,7 @@ static dhcp_status_t chose_address(lease_table_t *table, const uint8_t *key,
 
   for (uint8_t i = 0; i < table->size; i++) {
     lease_slot_t *slot = (table->slots + i);
+
     if (first_free == 0 && (slot->state == LEASE_ST_FREE ||
                             !slot_alive(slot, sys_uptime() / 1000))) {
       first_free = slot;
@@ -308,6 +309,8 @@ static dhcp_status_t chose_address(lease_table_t *table, const uint8_t *key,
     if (key_len != slot->key_len || (memcmp(slot->key, key, key_len) != 0))
       continue;
 
+    if (slot->state == LEASE_ST_DECLINED)
+      continue;
     found = slot;
     found_idx = i;
     break;
@@ -471,6 +474,7 @@ void dhcp_task(void *args) {
           net_send_args_t zero_args = {0, 0, 0, 0, 0, 0};
           if (memcmp(&ack_args, &zero_args, sizeof(net_send_args_t)) == 0)
             break;
+
           uprintf("[dhcp] Sending ACK\r\n");
           sys_net_send(socket, &ack_args, &ack_reply_slot);
 
@@ -527,7 +531,7 @@ static void dhcp_handle_decline(const dhcp_msg_t *received_msg) {
   if (!received_msg->has_requested_ip)
     return;
 
-  int slot_idx = received_msg->ciaddr[3] - lease_table.start_addr[3];
+  int slot_idx = received_msg->requested_ip[3] - lease_table.start_addr[3];
 
   if (slot_idx < 0 || slot_idx >= lease_table.size)
     return;
@@ -647,15 +651,14 @@ static dhcp_status_t dhcp_handle_request(const dhcp_msg_t *received_msg,
     }
 
     dhcp_dest_t ack_dest =
-        dhcp_chose_destination(received_msg, received_msg->yiaddr, cfg, false);
+        dhcp_chose_destination(received_msg, requested_addr, cfg, false);
 
     out_args->tx_data = dhcp_reply_buffer;
     out_args->tx_length = ack_length;
     out_args->dst_port = ack_dest.port;
     out_args->use_mac = ack_dest.use_mac;
 
-    memcpy(out_args->dst_ip, cfg->start_addr, 4);
-    out_args->dst_ip[3] += slot_idx;
+    memcpy(out_args->dst_ip, ack_dest.ip, 4);
     if (out_args->use_mac)
       memcpy(out_args->mac, ack_dest.mac, 6);
   } else {

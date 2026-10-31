@@ -160,27 +160,23 @@ def build(kind, xid, chaddr, client_id, broadcast_flag, **fields):
       plus the four negative cases used by --negative, which are easier to
       build by hand than through this dispatcher.
     """
-    if kind == DISCOVER:
-        options = {
-            OPT_MESSAGE_TYPE: DISCOVER.to_bytes(1, byteorder="big"),
-            OPT_MAX_MSG_SIZE: (576).to_bytes(2, byteorder="big"),
-            OPT_VENDOR_CLASS: b"udhcp 1.19.3",
-            OPT_CLIENT_ID: client_id,
-            OPT_PARAM_LIST: PARAM_LIST,
-        }
-    if kind == REQUEST:
-        options = {
-            OPT_MESSAGE_TYPE: REQUEST.to_bytes(1, byteorder="big"),
-            OPT_MAX_MSG_SIZE: (576).to_bytes(2, byteorder="big"),
-            OPT_VENDOR_CLASS: b"udhcp 1.19.3",
-            OPT_CLIENT_ID: client_id,
-            OPT_PARAM_LIST: PARAM_LIST,
-            OPT_REQUESTED_IP: fields["opts"][OPT_REQUESTED_IP],
-            OPT_SERVER_ID: fields["opts"][OPT_SERVER_ID],
-        }
+    options = {
+        OPT_MESSAGE_TYPE: kind.to_bytes(1, byteorder="big"),
+        OPT_MAX_MSG_SIZE: (576).to_bytes(2, byteorder="big"),
+        OPT_VENDOR_CLASS: b"udhcp 1.19.3",
+        OPT_CLIENT_ID: client_id,
+        OPT_PARAM_LIST: PARAM_LIST,
+    }
+    if kind == REQUEST or kind == DECLINE:
+        options[OPT_REQUESTED_IP] = fields["opts"][OPT_REQUESTED_IP]
+        options[OPT_SERVER_ID] = fields["opts"][OPT_SERVER_ID]
     option_bytes = build_options(options)
     header_bytes = build_header(
-        BOOTREQUEST, xid, chaddr, 0x8000 if broadcast_flag else 0
+        BOOTREQUEST,
+        xid,
+        chaddr,
+        0x8000 if broadcast_flag else 0,
+        ciaddr=fields.get("ciaddr", b"\0" * 4),
     )
     full_bytes = header_bytes + MAGIC_COOKIE + option_bytes
     return full_bytes
@@ -402,7 +398,7 @@ def recv_matching(sock, xid, expect_server_id, timeout):
 
 
 def run_happy_path(sock, args):
-    """DISCOVER -> OFFER -> REQUEST -> ACK. Returns list of failures.
+    """DISCOVER -> OFFER -> DECLINE -> OFFER -> REQUEST -> ACK -> RELEASE. Returns list of failures.
 
     TODO: the state machine.
       xid = random 32-bit, chaddr = args.mac, client_id = b"\\x01" + chaddr
@@ -422,12 +418,15 @@ def run_happy_path(sock, args):
 
     server_id = socket.inet_aton(args.server)
 
+    # 1. send DISCOVER
     send(sock, build(DISCOVER, xid, chaddr, client_id, args.bcast))
 
+    # 2. receive OFFER
     data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
         return [f"{RED}no OFFER{RESET}"]
 
+    # 3. check OFFER
     failure_strings = check_offer(
         data_dict,
         {
@@ -441,6 +440,39 @@ def run_happy_path(sock, args):
     requested_ip = data_dict["yiaddr"]
     requested_ip = socket.inet_aton(requested_ip)
 
+    # 4. send DECLINE with offered ip
+    send(
+        sock,
+        build(
+            DECLINE,
+            xid,
+            chaddr,
+            client_id,
+            args.bcast,
+            opts={OPT_REQUESTED_IP: requested_ip, OPT_SERVER_ID: server_id},
+        ),
+    )
+
+    # 5. receive new OFFER
+    data_dict = recv_matching(sock, xid, server_id, args.timeout)
+    if data_dict is None:
+        return [f"{RED} no back from DECLINE{RESET}"]
+
+    # 6. check new OFFER
+    failure_strings += check_offer(
+        data_dict,
+        {
+            "xid": xid,
+            "chaddr": chaddr,
+            "client_id": client_id,
+            "server_id": server_id,
+        },
+    )
+
+    requested_ip = data_dict["yiaddr"]
+    requested_ip = socket.inet_aton(requested_ip)
+
+    # 7. send REQUEST with new ip
     send(
         sock,
         build(
@@ -453,10 +485,12 @@ def run_happy_path(sock, args):
         ),
     )
 
+    # 8. receive ACK
     data_dict = recv_matching(sock, xid, server_id, args.timeout)
     if data_dict is None:
         return [f"{RED} no back from REQUEST{RESET}"]
 
+    # 9. check ACK
     failure_strings += check_ack(
         data_dict,
         {
@@ -466,6 +500,20 @@ def run_happy_path(sock, args):
             "server_id": server_id,
             "requested_ip": requested_ip,
         },
+    )
+
+    # 10. send RELEASE
+    send(
+        sock,
+        build(
+            RELEASE,
+            xid,
+            chaddr,
+            client_id,
+            args.bcast,
+            opts={OPT_REQUESTED_IP: requested_ip, OPT_SERVER_ID: server_id},
+            ciaddr=requested_ip,
+        ),
     )
     return failure_strings
 
