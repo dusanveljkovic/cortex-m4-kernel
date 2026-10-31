@@ -41,8 +41,6 @@ source/utils.c
 
 FLAGS_INCLUDE = \
 -Iinclude \
--Isource/drivers \
--Isource/user
 
 OBJECTS_LIST = 
 OBJECTS_LIST += $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCE_S_LIST:.s=.o)))

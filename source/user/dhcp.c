@@ -8,6 +8,9 @@
 #define DHCP_DEFAULT_LENGTH 240
 #define DHCP_OPTIONS_START 240
 
+#define DHCP_SERVER_PORT 6767
+#define DHCP_CLIENT_PORT 6868
+
 static dhcp_status_t parse_options(const uint8_t *buf, uint16_t len,
                                    dhcp_msg_t *out) {
   uint16_t pos = DHCP_OPTIONS_START;
@@ -76,7 +79,8 @@ static dhcp_status_t parse_options(const uint8_t *buf, uint16_t len,
   return DHCP_OK;
 }
 
-dhcp_status_t dhcp_parse(const uint8_t *buf, uint16_t len, dhcp_msg_t *out) {
+static dhcp_status_t dhcp_parse(const uint8_t *buf, uint16_t len,
+                                dhcp_msg_t *out) {
   if (out == 0 || buf == 0)
     return DHCP_ERR_ARG;
   if (len < DHCP_DEFAULT_LENGTH)
@@ -234,100 +238,6 @@ dhcp_build_reply(const uint8_t *req_raw, const dhcp_msg_t *req,
   return DHCP_OK;
 }
 
-void print_net_error(net_reply_t *reply) {
-  uprintf("![net] NET ERROR: ");
-  switch (reply->status) {
-  case NET_STATUS_OK:
-    uprintf("OK\r\n");
-    break;
-  case NET_STATUS_RETRY:
-    uprintf("RETRY\r\n");
-    break;
-  case NET_STATUS_BAD_REQUEST:
-    uprintf("BAD REQUEST\r\n");
-    break;
-  case NET_STATUS_FAULT:
-    uprintf("FAULT\r\n");
-    break;
-  case NET_STATUS_DEAD:
-    uprintf("DEAD\r\n");
-    break;
-  case NET_STATUS_UNREACHABLE:
-    uprintf("UNREACHABLE\r\n");
-    break;
-  }
-}
-
-void print_dhcp_error(dhcp_status_t status) {
-  uprintf("![dhcp] ERROR: ");
-  switch (status) {
-  case DHCP_ERR_MALFORMED:
-    uprintf("MALFORMED\r\n");
-    break;
-  case DHCP_ERR_NOT_DHCP:
-    uprintf("NOT DHCP\r\n");
-    break;
-  case DHCP_ERR_SHORT:
-    uprintf("SHORT\r\n");
-    break;
-  case DHCP_ERR_ARG:
-    uprintf("ARG\r\n");
-    break;
-  default:
-    break;
-  }
-}
-
-void dhcp_msg_print(dhcp_msg_t *msg, uint16_t len, uint8_t *buffer) {
-  uprintf("OP: %d HTYPE: %d HLEN: %d HOPS: %d\r\n", msg->op, msg->htype,
-          msg->hlen, msg->hops);
-  uprintf("XID: %x%x%x%x\r\n", msg->xid[0], msg->xid[1], msg->xid[2],
-          msg->xid[3]);
-  uprintf("SECS: %d\tFLAGS: %x\r\n", msg->secs, msg->flags);
-  uprintf("CIADDR: %d.%d.%d.%d\r\n", msg->ciaddr[0], msg->ciaddr[1],
-          msg->ciaddr[2], msg->ciaddr[3]);
-  uprintf("YIADDR: %d.%d.%d.%d\r\n", msg->yiaddr[0], msg->yiaddr[1],
-          msg->yiaddr[2], msg->yiaddr[3]);
-  uprintf("SIADDR: %d.%d.%d.%d\r\n", msg->siaddr[0], msg->siaddr[1],
-          msg->siaddr[2], msg->siaddr[3]);
-  uprintf("GIADDR: %d.%d.%d.%d\r\n", msg->giaddr[0], msg->giaddr[1],
-          msg->giaddr[2], msg->giaddr[3]);
-  uprintf("CHADDR: %02x:%02x:%02x:%02x:%02x:%02x\r\n", msg->chaddr[0],
-          msg->chaddr[1], msg->chaddr[2], msg->chaddr[3], msg->chaddr[4],
-          msg->chaddr[5]);
-
-  if (msg->has_requested_ip)
-    uprintf("OPT[requested ip]: %d.%d.%d.%d\r\n", msg->requested_ip[0],
-            msg->requested_ip[1], msg->requested_ip[2], msg->requested_ip[3]);
-  if (msg->has_message_type)
-    uprintf("OPT[message type]: %d\r\n", msg->message_type);
-
-  if (msg->has_server_id)
-    uprintf("OPT[server id]: %d.%d.%d.%d\r\n", msg->server_id[0],
-            msg->server_id[1], msg->server_id[2], msg->server_id[3]);
-
-  uprintf("OPT[requested]: [");
-  for (uint16_t i = 0; i < 32; i++) {
-    for (uint8_t j = 0; j < 8; j++) {
-      if (msg->requested_bitmap[i] & (1u << j))
-        uprintf("%d, ", (i * 8 + j));
-    }
-  }
-  uprintf("]\r\n");
-
-  if (msg->has_client_id)
-    uprintf("OPT[client_id]: %x%x%x%x\r\n", msg->client_id[0],
-            msg->client_id[1], msg->client_id[2], msg->client_id[3]);
-  // uprintf("RAW\r\n");
-  // for (uint16_t i = 0; i < len; i++) {
-  //   uprintf("%02x", buffer[i]);
-  // }
-  // uprintf("\r\n");
-}
-
-#define DHCP_SERVER_PORT 6767
-#define DHCP_CLIENT_PORT 6868
-
 static bool slot_alive(lease_slot_t *slot, uint32_t now_seconds) {
   return slot->state != LEASE_ST_FREE &&
          (int32_t)(now_seconds - slot->expires_at) < 0;
@@ -340,25 +250,33 @@ typedef struct {
   uint8_t mac[6];
 } dhcp_dest_t;
 
-dhcp_dest_t dhcp_chose_destination(const dhcp_msg_t *req,
-                                   const uint8_t yiaddr[4],
-                                   const dhcp_cfg_t *cfg, bool is_nak) {
+static dhcp_dest_t dhcp_chose_destination(const dhcp_msg_t *req,
+                                          const uint8_t yiaddr[4],
+                                          const dhcp_cfg_t *cfg, bool is_nak) {
   dhcp_dest_t dest;
   uint8_t zero_addr[4] = {0, 0, 0, 0};
   uint8_t broadcast_addr[4] = {255, 255, 255, 255};
+
   if (memcmp(req->giaddr, zero_addr, 4) != 0) {
+
     memcpy(dest.ip, req->giaddr, 4);
     dest.port = DHCP_SERVER_PORT;
     dest.use_mac = false;
+
   } else if (memcmp(req->ciaddr, zero_addr, 4) != 0) {
+
     memcpy(dest.ip, req->ciaddr, 4);
     dest.port = DHCP_CLIENT_PORT;
     dest.use_mac = false;
+
   } else if (req->broadcast_flag) {
+
     memcpy(dest.ip, broadcast_addr, 4);
     dest.port = DHCP_CLIENT_PORT;
     dest.use_mac = false;
+
   } else {
+
     memcpy(dest.ip, yiaddr, 4);
     dest.port = DHCP_CLIENT_PORT;
     dest.use_mac = true;
@@ -368,17 +286,17 @@ dhcp_dest_t dhcp_chose_destination(const dhcp_msg_t *req,
   return dest;
 }
 
-static dhcp_status_t chose_address(lease_table_t *table, uint8_t *key,
+static dhcp_status_t chose_address(lease_table_t *table, const uint8_t *key,
                                    uint8_t key_len, uint32_t lease_time,
                                    uint8_t *chosen_address, bool *has_chosen) {
 
   if (table == 0 || key == 0 || key_len == 0 || chosen_address == 0 ||
       key_len > LEASE_KEY_CAP || has_chosen == 0)
     return DHCP_ERR_ARG;
-  lease_slot_t *found = 0;
-  uint8_t found_idx;
-  lease_slot_t *first_free = 0;
-  uint8_t first_free_idx;
+
+  lease_slot_t *found = 0, *first_free = 0;
+  uint8_t found_idx, first_free_idx;
+
   for (uint8_t i = 0; i < table->size; i++) {
     lease_slot_t *slot = (table->slots + i);
     if (first_free == 0 && (slot->state == LEASE_ST_FREE ||
@@ -386,22 +304,22 @@ static dhcp_status_t chose_address(lease_table_t *table, uint8_t *key,
       first_free = slot;
       first_free_idx = i;
     }
-    if (key_len != slot->key_len)
+
+    if (key_len != slot->key_len || (memcmp(slot->key, key, key_len) != 0))
       continue;
-    if (memcmp(slot->key, key, key_len) != 0)
-      continue;
+
     found = slot;
     found_idx = i;
     break;
   }
-  if (found != 0) {
+  if (found) {
 
     found->expires_at = sys_uptime() / 1000 + lease_time;
     memcpy(chosen_address, table->start_addr, 4);
     chosen_address[3] += found_idx;
     *has_chosen = true;
 
-  } else if (first_free != 0) {
+  } else if (first_free) {
 
     first_free->state = LEASE_ST_OFFERED;
     first_free->expires_at = sys_uptime() / 1000 + 60;
@@ -415,6 +333,7 @@ static dhcp_status_t chose_address(lease_table_t *table, uint8_t *key,
   } else {
     *has_chosen = false;
   }
+
   return DHCP_OK;
 }
 
@@ -430,9 +349,7 @@ static void journal_compact(lease_table_t *table);
 lease_table_t lease_table = {0, 0};
 lease_table_t *get_dhcp_lease_table(void) { return &lease_table; }
 
-void dhcp_task(void *args) {
-  uprintf("[dhcp] Starting server...\r\n");
-  dhcp_cfg_t *cfg = (dhcp_cfg_t *)args;
+static socket_t *start_dhcp_server(dhcp_cfg_t *cfg) {
   socket_t *socket = sys_socket_get(0);
   net_reply_t reply_slot = {0, 0, 0, 0, 0};
 
@@ -442,9 +359,13 @@ void dhcp_task(void *args) {
   sys_socket_open(socket, &reply_slot);
   if (reply_slot.status != NET_STATUS_OK) {
     print_net_error(&reply_slot);
-    return;
+    return 0;
   }
 
+  return socket;
+}
+
+static void setup_lease_table(dhcp_cfg_t *cfg) {
   uint8_t lease_table_size = cfg->end_addr[3] - cfg->start_addr[3] + 1;
   lease_slot_t *all_slots =
       (lease_slot_t *)sys_malloc(sizeof(lease_slot_t) * lease_table_size);
@@ -458,6 +379,33 @@ void dhcp_task(void *args) {
   load_lease_table(&lease_table, &should_compact);
   if (should_compact)
     journal_compact(&lease_table);
+}
+
+static dhcp_status_t
+dhcp_handle_request(const dhcp_msg_t *received_msg, const dhcp_cfg_t *cfg,
+                    uint8_t *net_buffer, uint8_t *dhcp_reply_buffer,
+                    uint16_t dhcp_reply_buffer_size, net_send_args_t *out_args);
+static dhcp_status_t dhcp_build_offer_args(const dhcp_msg_t *received_msg,
+                                           const dhcp_cfg_t *cfg,
+                                           uint8_t *net_buffer,
+                                           uint8_t *dhcp_reply_buffer,
+                                           uint16_t dhcp_reply_buffer_size,
+                                           net_send_args_t *out_args);
+static void dhcp_handle_decline(const dhcp_msg_t *received_msg);
+static void dhcp_handle_release(const dhcp_msg_t *received_msg);
+
+void dhcp_task(void *args) {
+  uprintf("[dhcp] Starting server...\r\n");
+  dhcp_cfg_t *cfg = (dhcp_cfg_t *)args;
+
+  socket_t *socket = start_dhcp_server(cfg);
+  net_reply_t reply_slot = {0, 0, 0, 0, 0};
+  if (socket == 0) {
+    uprintf("[dhcp][!] Couldn't start\r\n");
+    return;
+  }
+
+  setup_lease_table(cfg);
 
   uint16_t net_buffer_size = 1500;
   uint8_t *net_buffer =
@@ -471,6 +419,7 @@ void dhcp_task(void *args) {
 
   while (true) {
     sys_net_recv(socket, net_buffer, net_buffer_size, &reply_slot);
+
     if (reply_slot.status == NET_STATUS_OK && reply_slot.got != 0) {
       dhcp_status_t dhcp_status =
           dhcp_parse(net_buffer, reply_slot.got, received_msg);
@@ -482,122 +431,84 @@ void dhcp_task(void *args) {
       uprintf("[dhcp] Received message:\r\n");
       dhcp_msg_print(received_msg, reply_slot.got, net_buffer);
 
-      if (received_msg->op == BOOTREQUEST && received_msg->has_message_type &&
-          received_msg->message_type == DHCP_MSG_DISCOVER) {
-        uint16_t offer_length = 0;
-        uint8_t chosen_address[4];
-        bool has_chosen = false;
-        chose_address(&lease_table, received_msg->lease_key,
-                      received_msg->lease_key_length, cfg->lease_time,
-                      chosen_address, &has_chosen);
-        if (!has_chosen) {
-          uprintf("[dhcp] Didn't chose an address\r\n");
-          continue;
-        } else {
-          uprintf("[dhcp] Chose address %d.%d.%d.%d\r\n", chosen_address[0],
-                  chosen_address[1], chosen_address[2], chosen_address[3]);
-        }
-        dhcp_status = dhcp_build_reply(net_buffer, received_msg, DHCP_MSG_OFFER,
-                                       cfg, chosen_address, dhcp_reply_buffer,
-                                       dhcp_reply_buffer_size, &offer_length);
-        if (dhcp_status != DHCP_OK) {
-          uprintf("[dhcp][!] Couldn't build an offer\r\n");
-          print_dhcp_error(dhcp_status);
-          continue;
-        }
+      if (received_msg->op != BOOTREQUEST || !received_msg->has_message_type) {
+        uprintf("[dhcp] Message is not bootrequest or has no message type\r\n");
+        continue;
+      } else {
+        uprintf("[dhcp] Recevied ");
+        dhcp_print_msg_type(received_msg->message_type);
+        uprintf("\r\n");
 
-        dhcp_dest_t offer_dest =
-            dhcp_chose_destination(received_msg, chosen_address, cfg, false);
-        uprintf(
-            "[dhcp] chose destination %d.%d.%d.%d:%d %d %x:%x:%x:%x:%x:%x\r\n",
-            offer_dest.ip[0], offer_dest.ip[1], offer_dest.ip[2],
-            offer_dest.ip[3], offer_dest.port, offer_dest.use_mac,
-            offer_dest.mac[0], offer_dest.mac[1], offer_dest.mac[2],
-            offer_dest.mac[3], offer_dest.mac[4], offer_dest.mac[5]);
-
-        net_send_args_t offer_args = {.tx_data = dhcp_reply_buffer,
-                                      .tx_length = offer_length,
-                                      .dst_port = offer_dest.port,
-                                      .use_mac = offer_dest.use_mac};
-        memcpy(offer_args.dst_ip, offer_dest.ip, 4);
-        if (offer_dest.use_mac)
-          memcpy(offer_args.mac, offer_dest.mac, 6);
-
-        net_reply_t offer_reply_slot = {0, 0, 0, 0, 0};
-        uprintf("[dhcp] Received a discover\r\n");
-        uprintf("[dhcp] Sending an offer\r\n");
-        uprintf("dest.use_mac %d\r\n", offer_args.use_mac);
-
-        sys_net_send(socket, &offer_args, &offer_reply_slot);
-
-        if (offer_reply_slot.status != NET_STATUS_OK) {
-          uprintf("[dhcp][!] Couldn't send an offer\r\n");
-          print_net_error(&reply_slot);
-          continue;
-        }
-      }
-      if (received_msg->op == BOOTREQUEST && received_msg->has_message_type &&
-          received_msg->message_type == DHCP_MSG_REQUEST) {
-        uprintf("[dhcp] Received a request\r\n");
-
-        if (received_msg->has_server_id &&
-            memcmp(received_msg->server_id, cfg->server_id, 4) != 0)
-          continue;
-
-        uint8_t requested_addr[4];
-        if (received_msg->has_requested_ip) {
-          memcpy(requested_addr, received_msg->requested_ip, 4);
-        } else {
-          memcpy(requested_addr, received_msg->ciaddr, 4);
-        }
-
-        int slot_idx = requested_addr[3] - lease_table.start_addr[3];
-        if (slot_idx < 0 || slot_idx >= lease_table.size)
-          continue;
-        lease_slot_t *slot = (lease_table.slots + slot_idx);
-        uprintf("slot_idx %d, %d", slot_idx,
-                slot_alive(slot, sys_uptime() / 1000));
-        if (slot_alive(slot, sys_uptime() / 1000) &&
-            slot->key_len == received_msg->lease_key_length &&
-            memcmp(slot->key, received_msg->lease_key, slot->key_len) == 0) {
-          slot->state = LEASE_ST_BOUND;
-          slot->expires_at = sys_uptime() / 1000 + cfg->lease_time;
-
-          uint8_t record[32];
-          serialize_record(slot, requested_addr, record);
-          write_record(record);
-
-          uint16_t ack_length = 0;
-          dhcp_status = dhcp_build_reply(net_buffer, received_msg, DHCP_MSG_ACK,
-                                         cfg, requested_addr, dhcp_reply_buffer,
-                                         dhcp_reply_buffer_size, &ack_length);
+        switch (received_msg->message_type) {
+        case DHCP_MSG_DISCOVER: {
+          net_send_args_t offer_args;
+          net_reply_t offer_reply_slot;
+          dhcp_status = dhcp_build_offer_args(
+              received_msg, cfg, net_buffer, dhcp_reply_buffer,
+              dhcp_reply_buffer_size, &offer_args);
           if (dhcp_status != DHCP_OK) {
-            uprintf("[dhcp][!] Couldn't build a ACK message\r\n");
-            print_dhcp_error(dhcp_status);
-            continue;
+            break;
           }
-          dhcp_dest_t ack_dest = dhcp_chose_destination(
-              received_msg, received_msg->yiaddr, cfg, false);
+          uprintf("[dhcp] Sending an offer\r\n");
 
-          net_send_args_t ack_args = {.tx_data = dhcp_reply_buffer,
-                                      .tx_length = ack_length,
-                                      .dst_port = ack_dest.port,
-                                      .use_mac = ack_dest.use_mac};
-          memcpy(ack_args.dst_ip, cfg->start_addr, 4);
-          ack_args.dst_ip[3] += slot_idx;
-          if (ack_dest.use_mac)
-            memcpy(ack_args.mac, ack_dest.mac, 6);
-
-          net_reply_t offer_reply_slot = {0, 0, 0, 0, 0};
-          uprintf("[dhcp] Sending an ACK\r\n");
-
-          sys_net_send(socket, &ack_args, &offer_reply_slot);
+          sys_net_send(socket, &offer_args, &offer_reply_slot);
 
           if (offer_reply_slot.status != NET_STATUS_OK) {
-            uprintf("[dhcp][!] Couldn't send an ACK\r\n");
+            uprintf("[dhcp][!] Couldn't send an offer\r\n");
             print_net_error(&reply_slot);
-            continue;
           }
+          break;
+        }
+        case DHCP_MSG_REQUEST: {
+          net_send_args_t ack_args;
+          net_reply_t ack_reply_slot;
+          dhcp_status = dhcp_handle_request(received_msg, cfg, net_buffer,
+                                            dhcp_reply_buffer,
+                                            dhcp_reply_buffer_size, &ack_args);
+          if (dhcp_status != DHCP_OK) {
+            break;
+          }
+          net_send_args_t zero_args = {0, 0, 0, 0, 0, 0};
+          if (memcmp(&ack_args, &zero_args, sizeof(net_send_args_t)) == 0)
+            break;
+          uprintf("[dhcp] Sending ACK\r\n");
+          sys_net_send(socket, &ack_args, &ack_reply_slot);
+
+          if (ack_reply_slot.status != NET_STATUS_OK) {
+            uprintf("[dhcp][!] Couldn't send ACK\r\n");
+            print_net_error(&ack_reply_slot);
+          }
+          break;
+        }
+        case DHCP_MSG_DECLINE: {
+          dhcp_handle_decline(received_msg);
+
+          net_send_args_t offer_args;
+          net_reply_t offer_reply_slot;
+          dhcp_status = dhcp_build_offer_args(
+              received_msg, cfg, net_buffer, dhcp_reply_buffer,
+              dhcp_reply_buffer_size, &offer_args);
+          if (dhcp_status != DHCP_OK) {
+            break;
+          }
+          uprintf("[dhcp] Sending an offer\r\n");
+
+          sys_net_send(socket, &offer_args, &offer_reply_slot);
+
+          if (offer_reply_slot.status != NET_STATUS_OK) {
+            uprintf("[dhcp][!] Couldn't send an offer\r\n");
+            print_net_error(&reply_slot);
+          }
+          break;
+        }
+        case DHCP_MSG_RELEASE: {
+          dhcp_handle_release(received_msg);
+          break;
+        }
+        default:
+          uprintf("[dhcp] Can't handle message type %d\r\n",
+                  received_msg->message_type);
+          break;
         }
       }
     }
@@ -610,6 +521,147 @@ void dhcp_task(void *args) {
   sys_free(net_buffer);
   sys_free(dhcp_reply_buffer);
   sys_free(received_msg);
+}
+
+static void dhcp_handle_decline(const dhcp_msg_t *received_msg) {
+  if (!received_msg->has_requested_ip)
+    return;
+
+  int slot_idx = received_msg->ciaddr[3] - lease_table.start_addr[3];
+
+  if (slot_idx < 0 || slot_idx >= lease_table.size)
+    return;
+
+  lease_slot_t *slot = (lease_table.slots + slot_idx);
+  if (slot->key_len != received_msg->lease_key_length ||
+      (memcmp(slot->key, received_msg->lease_key, slot->key_len) != 0))
+    return;
+
+  slot->state = LEASE_ST_DECLINED;
+  slot->expires_at = (sys_uptime() / 1000) + 300;
+}
+
+static void dhcp_handle_release(const dhcp_msg_t *received_msg) {
+  int slot_idx = received_msg->ciaddr[3] - lease_table.start_addr[3];
+
+  if (slot_idx < 0 || slot_idx >= lease_table.size)
+    return;
+
+  lease_slot_t *slot = (lease_table.slots + slot_idx);
+  if (slot->key_len != received_msg->lease_key_length ||
+      (memcmp(slot->key, received_msg->lease_key, slot->key_len) != 0))
+    return;
+
+  slot->state = LEASE_ST_FREE;
+  slot->expires_at = 0;
+
+  uint8_t record[32];
+  serialize_record(slot, (uint8_t *)received_msg->ciaddr, record);
+  write_record(record);
+}
+
+static dhcp_status_t dhcp_build_offer_args(const dhcp_msg_t *received_msg,
+                                           const dhcp_cfg_t *cfg,
+                                           uint8_t *net_buffer,
+                                           uint8_t *dhcp_reply_buffer,
+                                           uint16_t dhcp_reply_buffer_size,
+                                           net_send_args_t *out_args) {
+
+  uint16_t offer_length = 0;
+  uint8_t chosen_address[4];
+  dhcp_status_t dhcp_status;
+
+  bool has_chosen = false;
+  chose_address(&lease_table, received_msg->lease_key,
+                received_msg->lease_key_length, cfg->lease_time, chosen_address,
+                &has_chosen);
+  if (!has_chosen) {
+    uprintf("[dhcp] Didn't chose an address\r\n");
+    return DHCP_ERR_ARG;
+  }
+
+  dhcp_status = dhcp_build_reply(net_buffer, received_msg, DHCP_MSG_OFFER, cfg,
+                                 chosen_address, dhcp_reply_buffer,
+                                 dhcp_reply_buffer_size, &offer_length);
+  if (dhcp_status != DHCP_OK) {
+    uprintf("[dhcp][!] Couldn't build an offer\r\n");
+    return dhcp_status;
+  }
+
+  dhcp_dest_t offer_dest =
+      dhcp_chose_destination(received_msg, chosen_address, cfg, false);
+
+  out_args->tx_data = dhcp_reply_buffer;
+  out_args->tx_length = offer_length;
+  out_args->dst_port = offer_dest.port;
+  out_args->use_mac = offer_dest.use_mac;
+  memcpy(out_args->dst_ip, offer_dest.ip, 4);
+  if (offer_dest.use_mac)
+    memcpy(out_args->mac, offer_dest.mac, 6);
+
+  return DHCP_OK;
+}
+
+static dhcp_status_t dhcp_handle_request(const dhcp_msg_t *received_msg,
+                                         const dhcp_cfg_t *cfg,
+                                         uint8_t *net_buffer,
+                                         uint8_t *dhcp_reply_buffer,
+                                         uint16_t dhcp_reply_buffer_size,
+                                         net_send_args_t *out_args) {
+
+  if (received_msg->has_server_id &&
+      memcmp(received_msg->server_id, cfg->server_id, 4) != 0)
+    return DHCP_ERR_ARG;
+
+  uint8_t requested_addr[4];
+  if (received_msg->has_requested_ip) {
+    memcpy(requested_addr, received_msg->requested_ip, 4);
+  } else {
+    memcpy(requested_addr, received_msg->ciaddr, 4);
+  }
+
+  int slot_idx = requested_addr[3] - lease_table.start_addr[3];
+  if (slot_idx < 0 || slot_idx >= lease_table.size)
+    return DHCP_ERR_ARG;
+
+  lease_slot_t *slot = (lease_table.slots + slot_idx);
+
+  if (slot_alive(slot, sys_uptime() / 1000) &&
+      slot->key_len == received_msg->lease_key_length &&
+      memcmp(slot->key, received_msg->lease_key, slot->key_len) == 0) {
+    slot->state = LEASE_ST_BOUND;
+    slot->expires_at = sys_uptime() / 1000 + cfg->lease_time;
+
+    uint8_t record[32];
+    dhcp_status_t dhcp_status;
+    serialize_record(slot, requested_addr, record);
+    write_record(record);
+
+    uint16_t ack_length = 0;
+    dhcp_status = dhcp_build_reply(net_buffer, received_msg, DHCP_MSG_ACK, cfg,
+                                   requested_addr, dhcp_reply_buffer,
+                                   dhcp_reply_buffer_size, &ack_length);
+    if (dhcp_status != DHCP_OK) {
+      uprintf("[dhcp][!] Couldn't build a ACK message\r\n");
+      return dhcp_status;
+    }
+
+    dhcp_dest_t ack_dest =
+        dhcp_chose_destination(received_msg, received_msg->yiaddr, cfg, false);
+
+    out_args->tx_data = dhcp_reply_buffer;
+    out_args->tx_length = ack_length;
+    out_args->dst_port = ack_dest.port;
+    out_args->use_mac = ack_dest.use_mac;
+
+    memcpy(out_args->dst_ip, cfg->start_addr, 4);
+    out_args->dst_ip[3] += slot_idx;
+    if (out_args->use_mac)
+      memcpy(out_args->mac, ack_dest.mac, 6);
+  } else {
+    memset(out_args, 0, sizeof(net_send_args_t));
+  }
+  return DHCP_OK;
 }
 
 #define JOURNAL_VER 1
