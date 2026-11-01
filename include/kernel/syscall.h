@@ -45,6 +45,8 @@ enum {
   SYS_NET_SEND,
 };
 
+uintptr_t syscall(uint32_t number, uintptr_t a0, uintptr_t a1, uintptr_t a2,
+                  uintptr_t a3);
 void sys_yield(void);
 
 uint32_t sys_uptime(void);

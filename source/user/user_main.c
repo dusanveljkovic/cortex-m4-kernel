@@ -6,29 +6,35 @@
 #include "../../include/user/uprintf.h"
 #include <stdint.h>
 
-// void parse_test() {
-//   dhcp_cfg_t config = {.start_addr = {192, 168, 0, 110},
-//                        .end_addr = {192, 168, 0, 200},
-//                        .to_give = 90,
-//                        .server_id = {192, 168, 0, 105},
-//                        .lease_time = 3600,
-//                        .subnet_mask = {192, 168, 0, 255},
-//                        .router = {192, 168, 0, 1},
-//                        .dns = {8, 8, 8, 8},
-//                        .broadcast_addr = {255, 255, 255, 255}};
-//   uint8_t *out = (uint8_t *)sys_malloc(1500 * sizeof(uint8_t));
-//   dhcp_msg_t *msg = (dhcp_msg_t *)sys_malloc(sizeof(dhcp_msg_t));
-//   dhcp_parse(dhcp_discover_raw, DHCP_DISCOVER_RAW_LEN, msg);
-//   dhcp_msg_print(msg, DHCP_DISCOVER_RAW_LEN, (uint8_t *)dhcp_discover_raw);
-//   uint16_t out_len = 0;
-//   dhcp_build_offer(dhcp_discover_raw, msg, &config, out, 1500, &out_len);
-//   dhcp_parse(out, out_len, msg);
-//   dhcp_msg_print(msg, out_len, out);
-// }
+typedef struct {
+  semaphore_t *sem1;
+  semaphore_t *sem2;
+} arg_wrap_t;
+
+void ping_task(void *arg) {
+  arg_wrap_t *a = (arg_wrap_t *)arg;
+  while (true) {
+    sys_sem_post(a->sem1);
+    sys_sem_wait(a->sem2);
+  }
+}
+
+void pong_task(void *arg) {
+  arg_wrap_t *a = (arg_wrap_t *)arg;
+  while (true) {
+    sys_sem_post(a->sem2);
+    sys_sem_wait(a->sem1);
+  }
+}
+
+void fpu_task(void *arg) {
+  float x = 1.0, y = 3.2, z = 0.0;
+  while (true) {
+    z += x * y;
+  }
+}
 
 void user_main(void *arg) {
-  // semaphore_t *sem1 = sys_sem_create(0);
-  // semaphore_t *sem2 = sys_sem_create(0);
   // mutex_t *m1 = sys_mutex_create();
   // wrapper_t *parg1 = sys_malloc(sizeof(wrapper_t));
   // parg1->number = 1;
@@ -36,20 +42,17 @@ void user_main(void *arg) {
   // parg1->sem2 = sem2;
   // parg1->m = m1;
   uprintf("[user] user task\r\n");
-  // tcb_t *t3 = sys_task_create(1, low_task, parg1);
-  // sys_task_set_name(t3, "low task");
-  // float x1 = 0.222;
-  // float x2 = 0.333;
-  // float x3 = x1 + x2;
+#if BENCH
+  semaphore_t *sem1 = sys_sem_create(0);
+  semaphore_t *sem2 = sys_sem_create(0);
+  arg_wrap_t *arg1 = (arg_wrap_t *)sys_malloc(sizeof(arg_wrap_t));
+  arg1->sem1 = sem1;
+  arg1->sem2 = sem2;
+  tcb_t *t1 = sys_task_create(3, ping_task, arg1);
+  tcb_t *t2 = sys_task_create(3, pong_task, arg1);
+  tcb_t *t3 = sys_task_create(3, fpu_task, 0);
+#endif
 
-  // *((uint32_t *)0x20000c00) = 1;
-  // *((uint32_t *)0x20001000) = 1;
-  // *((uint32_t *)0x20001004) = 1;
-  // *((uint32_t *)0x20001008) = 1;
-  // *((uint32_t *)0x2000100C) = 1;
-  // uprintf("[user] testing FPU");
-  // fpu_test_start();
-  // net_test();
   dhcp_cfg_t *config = (dhcp_cfg_t *)sys_malloc(sizeof(dhcp_cfg_t));
   dhcp_cfg_t local_cfg = {.start_addr = {192, 168, 0, 110},
                           .end_addr = {192, 168, 0, 200},

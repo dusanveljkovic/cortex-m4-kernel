@@ -1,5 +1,7 @@
 PROGRAM = program
-BUILD_DIR = build
+BENCH = 0
+OPT = -O0
+BUILD_DIR = build$(if $(filter 1,$(BENCH)),-bench)
 DEBUG_ENABLED = 1
 
 SOURCE_S_LIST = \
@@ -11,6 +13,7 @@ source/kernel/sv_call_handler.s
 
 SOURCE_C_LIST = \
 source/kernel/arm.c \
+source/kernel/bench.c \
 source/kernel/main.c \
 source/kernel/flash.c \
 source/kernel/debug_handlers.c \
@@ -55,7 +58,11 @@ HX = arm-none-eabi-objcopy -O ihex
 
 MCU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 
-FLAGS_DEBUG = -g3 -O0 -fdebug-prefix-map=$(CURDIR)=.
+FLAGS_DEBUG = -g3 $(OPT) -fdebug-prefix-map=$(CURDIR)=.
+
+ifeq ($(BENCH), 1)
+	FLAGS_CC += -DBENCH=1
+endif
 
 FLAGS_AS =
 FLAGS_AS += $(MCU)

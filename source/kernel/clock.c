@@ -3,7 +3,8 @@
 #include "../../include/kernel/rcc.h"
 
 void clock_init(void) {
-  FLASH->ACR = FLASH_ACR_LATENCY_2WS | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
+  FLASH->ACR = FLASH_ACR_LATENCY_2WS | FLASH_ACR_ICEN | FLASH_ACR_DCEN |
+               FLASH_ACR_PRFTEN;
 
   RCC->CR |= RCC_CR_HSION;
 

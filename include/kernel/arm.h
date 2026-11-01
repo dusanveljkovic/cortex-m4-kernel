@@ -29,5 +29,10 @@ static inline uint32_t get_IPSR() {
 #define __ISB() asm volatile("isb");
 #define __SET_CONTROL(control)                                                 \
   asm volatile("msr control, %0" : : "r"(control) : "memory");
+static inline uint32_t get_CONTROL() {
+  uint32_t control;
+  asm volatile("mrs %0, control" : "=r"(control) : : "memory");
+  return control;
+}
 
 #endif // !_ARM_H

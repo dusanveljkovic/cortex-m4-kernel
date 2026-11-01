@@ -1,5 +1,6 @@
 #include "../../include/drivers/spi.h"
 #include "../../include/drivers/usart.h"
+#include "../../include/kernel/bench.h"
 #include "../../include/kernel/cli.h"
 #include "../../include/kernel/clock.h"
 #include "../../include/kernel/console.h"
@@ -46,6 +47,8 @@ int main() {
   clock_init();
   driver_register(&usart2_driver);
   console_attach(driver_find("usart2"));
+
+  enable_counter();
 
   spi_return_t spi_ret = spi1_configure();
   if (spi_ret != SPI_OK) {

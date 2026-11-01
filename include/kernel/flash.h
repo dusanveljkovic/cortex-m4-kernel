@@ -15,6 +15,7 @@ typedef struct {
 
 #define FLASH_ACR_LATENCY_2WS 0x2
 
+#define FLASH_ACR_PRFTEN (1 << 8)
 #define FLASH_ACR_ICEN (1 << 9)
 #define FLASH_ACR_DCEN (1 << 10)
 

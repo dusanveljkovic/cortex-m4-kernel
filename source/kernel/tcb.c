@@ -63,11 +63,11 @@ uint8_t task_recalculate_priority(tcb_t *task) {
 }
 
 void task_set_privilege(tcb_t *task) {
-  uint32_t control = 0;
+  uint32_t control = get_CONTROL();
 
   // set PSP as stack pointer
+  control &= ~((1 << 0) | (1 << 1));
   control |= (1 << 1);
-
   control |= (task->unprivileged << 0);
 
   __SET_CONTROL(control);

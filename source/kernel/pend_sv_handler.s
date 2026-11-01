@@ -9,12 +9,25 @@
 .extern current_task
 .extern next_task
 
+.extern bench_pendsv_start
+.extern bench_pendsv_end
+.extern bench_pendsv_lr
+.extern bench_record_switch
+
 .section .text.pend_sv_handler
 .type pend_sv_handler, %function
 .global pend_sv_handler
 .align 2
 pend_sv_handler:
+  ldr r1, =0xE0001004
+  ldr r1, [r1]
+  ldr r2, =bench_pendsv_start
+  str r1, [r2]
+  ldr r2, =bench_pendsv_lr
+  str lr, [r2]
+
   isb 
+
 
   ldr r1, =current_task
   ldr r1, [r1]
@@ -60,5 +73,16 @@ restore_task:
 
 skip_vldmia:
   msr psp, r0
+
   isb
+
+  ldr r1, =0xE0001004
+  ldr r1, [r1]
+  ldr r2, =bench_pendsv_end
+  str r1, [r2]
+
+  mov r0, lr
+  bl bench_record_switch
+  mov lr, r0
+
   bx lr

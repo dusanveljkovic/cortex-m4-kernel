@@ -1,5 +1,6 @@
 #include "../../include/kernel/cli.h"
 #include "../../include/kernel/arm.h"
+#include "../../include/kernel/bench.h"
 #include "../../include/kernel/console.h"
 #include "../../include/kernel/heap.h"
 #include "../../include/kernel/kprintf.h"
@@ -31,6 +32,7 @@ void cli_cmd_uptime(int argc, char **argv);
 void cli_cmd_mem(int argc, char **argv);
 void cli_cmd_heap(int argc, char **argv);
 void cli_cmd_mutex(int argc, char **argv);
+void cli_cmd_bench(int argc, char **argv);
 
 void cli_cmd_link(int argc, char **argv);
 
@@ -47,6 +49,7 @@ static const cli_command_t commands[] = {
     {"mem", "Print memory usage", cli_cmd_mem},
     {"heap", "Print heap usage", cli_cmd_heap},
     {"mutex", "Print mutex owners/waiters", cli_cmd_mutex},
+    {"bench", "Print the benchmarks", cli_cmd_bench},
     {"link", "Print w5500 link status", cli_cmd_link},
     {"spioff", "Turns spi off (used for testing)", cli_cmd_spioff},
     {"leasetable", "Print DHCP lease table", cli_cmd_leasetable},
@@ -275,4 +278,29 @@ __attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {
 
   while (1)
     ;
+}
+
+void print_bench_result(const char *name, bench_result_t *result) {
+  uint32_t p50 = 0, p99 = 0;
+  if (result->n != 0) {
+    p50 = calc_percentile(result, result->n / 2);
+    p99 = calc_percentile(result, result->n * 99 / 100);
+  }
+  kprintf("%20s %5d %5d %5d %5d %5d\r\n", name, result->n, p50, p99,
+          result->min, result->max);
+}
+
+void cli_cmd_bench(int argc, char **argv) {
+  bench_result_t *pre_result = get_preemption_result();
+  bench_result_t *pendsv_result = get_pendsv_result();
+  bench_result_t *pre_fp_result = get_preemption_fp_result();
+  bench_result_t *pendsv_fp_result = get_pendsv_fp_result();
+  bench_result_t syscall_result = bench_syscall_roundtrip();
+  kprintf("----------------Benchmarks----------------\r\n");
+  kprintf("Name          Count     p50     p99      Min     Max\r\n");
+  print_bench_result("Preemption", pre_result);
+  print_bench_result("Preemption FP", pre_fp_result);
+  print_bench_result("Pendsv", pendsv_result);
+  print_bench_result("Pendsv FP", pendsv_fp_result);
+  print_bench_result("Syscall roundtrip", &syscall_result);
 }

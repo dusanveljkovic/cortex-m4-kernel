@@ -13,8 +13,8 @@
 #include "../../include/kernel/utils.h"
 #include <stdint.h>
 
-static uintptr_t syscall(uint32_t number, uintptr_t a0, uintptr_t a1,
-                         uintptr_t a2, uintptr_t a3) {
+uintptr_t syscall(uint32_t number, uintptr_t a0, uintptr_t a1, uintptr_t a2,
+                  uintptr_t a3) {
   register uint32_t r12 asm("r12") = number;
   register uint32_t r0 asm("r0") = a0;
   register uint32_t r1 asm("r1") = a1;
