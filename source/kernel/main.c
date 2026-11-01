@@ -40,6 +40,7 @@ void fpu_init(void) {
 }
 
 int main() {
+  enable_counter();
   static_memory_init();
   heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
 
@@ -47,8 +48,6 @@ int main() {
   clock_init();
   driver_register(&usart2_driver);
   console_attach(driver_find("usart2"));
-
-  enable_counter();
 
   spi_return_t spi_ret = spi1_configure();
   if (spi_ret != SPI_OK) {

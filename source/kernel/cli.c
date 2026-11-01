@@ -296,6 +296,7 @@ void cli_cmd_bench(int argc, char **argv) {
   bench_result_t *pre_fp_result = get_preemption_fp_result();
   bench_result_t *pendsv_fp_result = get_pendsv_fp_result();
   bench_result_t syscall_result = bench_syscall_roundtrip();
+  bench_result_t *irq_result = get_irq_result();
   kprintf("----------------Benchmarks----------------\r\n");
   kprintf("Name          Count     p50     p99      Min     Max\r\n");
   print_bench_result("Preemption", pre_result);
@@ -303,4 +304,7 @@ void cli_cmd_bench(int argc, char **argv) {
   print_bench_result("Pendsv", pendsv_result);
   print_bench_result("Pendsv FP", pendsv_fp_result);
   print_bench_result("Syscall roundtrip", &syscall_result);
+  print_bench_result("IRQ masked", irq_result);
+  kprintf("Worst interrupts-masked window %d cycles in %x\r\n", irq_result->max,
+          bench_irq_site);
 }

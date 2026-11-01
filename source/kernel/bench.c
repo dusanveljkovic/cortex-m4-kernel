@@ -8,10 +8,14 @@ volatile uint32_t bench_pendsv_end;
 volatile uint32_t bench_pendsv_lr;
 volatile uint32_t bench_preemption_start;
 
+volatile uint32_t bench_irq_t0;
+volatile uint32_t bench_irq_site;
+
 static bench_result_t preemption_result = {.min = 0xFFFFFFFF};
 static bench_result_t preemption_fp_result = {.min = 0xFFFFFFFF};
 static bench_result_t pendsv_result = {.min = 0xFFFFFFFF};
 static bench_result_t pendsv_fp_result = {.min = 0xFFFFFFFF};
+static bench_result_t irq_result = {.min = 0xFFFFFFFF};
 
 void enable_counter(void) {
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA;
@@ -38,6 +42,12 @@ static inline void update_result(bench_result_t *result, uint32_t new_reading) {
     result->max = new_reading;
   if (new_reading < result->min)
     result->min = new_reading;
+}
+void update_irq_result(uint32_t new_reading, uint32_t here) {
+  if (new_reading > irq_result.max) {
+    bench_irq_site = here;
+  }
+  update_result(&irq_result, new_reading);
 }
 
 uint32_t bench_record_switch(uint32_t exc_return) {
@@ -85,3 +95,4 @@ bench_result_t *get_preemption_result(void) { return &preemption_result; }
 bench_result_t *get_pendsv_result(void) { return &pendsv_result; }
 bench_result_t *get_preemption_fp_result(void) { return &preemption_fp_result; }
 bench_result_t *get_pendsv_fp_result(void) { return &pendsv_fp_result; }
+bench_result_t *get_irq_result(void) { return &irq_result; }

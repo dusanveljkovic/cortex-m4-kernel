@@ -8,6 +8,9 @@ extern volatile uint32_t bench_pendsv_end;
 extern volatile uint32_t bench_pendsv_lr;
 extern volatile uint32_t bench_preemption_start;
 
+extern volatile uint32_t bench_irq_t0;
+extern volatile uint32_t bench_irq_site;
+
 typedef struct {
   volatile uint32_t DHCSR;
   volatile uint32_t DCRSR;
@@ -43,10 +46,12 @@ static inline uint32_t read_cycles(void) { return DWT->CYCCNT; }
 uint32_t calc_percentile(bench_result_t *result, uint32_t target);
 
 bench_result_t bench_syscall_roundtrip(void);
+void update_irq_result(uint32_t new_reading, uint32_t here);
 
 bench_result_t *get_preemption_result(void);
 bench_result_t *get_pendsv_result(void);
 bench_result_t *get_preemption_fp_result(void);
 bench_result_t *get_pendsv_fp_result(void);
+bench_result_t *get_irq_result(void);
 
 #endif // !_BENCH_H

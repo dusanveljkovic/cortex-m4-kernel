@@ -1,5 +1,6 @@
 PROGRAM = program
-BENCH = 0
+BENCH = 1
+BENCH_IRQ = 1
 OPT = -O0
 BUILD_DIR = build$(if $(filter 1,$(BENCH)),-bench)
 DEBUG_ENABLED = 1
@@ -60,9 +61,6 @@ MCU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 
 FLAGS_DEBUG = -g3 $(OPT) -fdebug-prefix-map=$(CURDIR)=.
 
-ifeq ($(BENCH), 1)
-	FLAGS_CC += -DBENCH=1
-endif
 
 FLAGS_AS =
 FLAGS_AS += $(MCU)
@@ -77,6 +75,12 @@ FLAGS_CC += -fno-builtin
 FLAGS_CC += $(FLAGS_INCLUDE)
 ifeq ($(DEBUG_ENABLED), 1)
 	FLAGS_CC += $(FLAGS_DEBUG)
+endif
+ifeq ($(BENCH), 1)
+	FLAGS_CC += -DBENCH=1
+endif
+ifeq ($(BENCH_IRQ), 1)
+	FLAGS_CC += -DBENCH_IRQ=1
 endif
 
 LINKER_SCRIPT = linker_script.ld
