@@ -95,8 +95,72 @@ bench_result_t bench_syscall_roundtrip(void) {
   return res;
 }
 
+void bench_reset(void) {
+  memset(&preemption_result, 0, sizeof(bench_result_t));
+  preemption_result.min = 0xFFFFFFFF;
+
+  memset(&preemption_fp_result, 0, sizeof(bench_result_t));
+  preemption_fp_result.min = 0xFFFFFFFF;
+
+  memset(&pendsv_result, 0, sizeof(bench_result_t));
+  pendsv_result.min = 0xFFFFFFFF;
+
+  memset(&pendsv_fp_result, 0, sizeof(bench_result_t));
+  pendsv_fp_result.min = 0xFFFFFFFF;
+
+  memset(&irq_result, 0, sizeof(bench_result_t));
+  irq_result.min = 0xFFFFFFFF;
+
+  bench_stop_flag = false;
+}
+typedef struct {
+  semaphore_t *sem1;
+  semaphore_t *sem2;
+} arg_wrap_t;
+
+static void ping_task(void *arg);
+static void pong_task(void *arg);
+static void fpu_task(void *arg);
+volatile bool bench_stop_flag = false;
+
+void start_workload(void) {
+  semaphore_t *sem1 = sys_sem_create(0);
+  semaphore_t *sem2 = sys_sem_create(0);
+  arg_wrap_t *arg1 = (arg_wrap_t *)sys_malloc(sizeof(arg_wrap_t));
+  arg1->sem1 = sem1;
+  arg1->sem2 = sem2;
+  sys_task_create(3, ping_task, arg1);
+  sys_task_create(3, pong_task, arg1);
+  sys_task_create(3, fpu_task, 0);
+}
+
 bench_result_t *get_preemption_result(void) { return &preemption_result; }
 bench_result_t *get_pendsv_result(void) { return &pendsv_result; }
 bench_result_t *get_preemption_fp_result(void) { return &preemption_fp_result; }
 bench_result_t *get_pendsv_fp_result(void) { return &pendsv_fp_result; }
 bench_result_t *get_irq_result(void) { return &irq_result; }
+
+static void ping_task(void *arg) {
+  arg_wrap_t *a = (arg_wrap_t *)arg;
+  while (!bench_stop_flag) {
+    sys_sem_post(a->sem1);
+    sys_sem_wait(a->sem2);
+  }
+}
+
+static void pong_task(void *arg) {
+  arg_wrap_t *a = (arg_wrap_t *)arg;
+  while (!bench_stop_flag) {
+    sys_sem_post(a->sem2);
+    sys_sem_wait(a->sem1);
+  }
+}
+
+static void fpu_task(void *arg) {
+  (void)arg;
+  float x = 1.0, y = 3.2;
+  volatile float z = 0.0;
+  while (!bench_stop_flag) {
+    z += x * y;
+  }
+}

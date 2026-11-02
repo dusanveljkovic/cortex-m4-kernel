@@ -1,6 +1,6 @@
 PROGRAM = program
-BENCH = 1
-BENCH_IRQ = 1
+BENCH = 0
+BENCH_IRQ = 0
 OPT = -O0
 BUILD_DIR = build$(if $(filter 1,$(BENCH)),-bench)
 DEBUG_ENABLED = 1
@@ -71,6 +71,7 @@ FLAGS_CC =
 FLAGS_CC += $(MCU)
 FLAGS_CC += -MMD -MP
 FLAGS_CC += -fno-builtin
+FLAGS_CC += -DBENCH_TAG='"$(OPT) bench=$(BENCH) irq=$(BENCH_IRQ)"'
 FLAGS_CC += -Wall -Wextra -std=gnu11 -ffreestanding
 FLAGS_CC += $(FLAGS_INCLUDE)
 ifeq ($(DEBUG_ENABLED), 1)

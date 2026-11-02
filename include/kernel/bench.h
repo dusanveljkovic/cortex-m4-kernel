@@ -1,6 +1,7 @@
 #ifndef _BENCH_H
 #define _BENCH_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 extern volatile uint32_t bench_pendsv_start;
@@ -47,6 +48,11 @@ uint32_t calc_percentile(bench_result_t *result, uint32_t target);
 
 bench_result_t bench_syscall_roundtrip(void);
 void update_irq_result(uint32_t new_reading, uint32_t here);
+
+extern volatile bool bench_stop_flag;
+
+void bench_reset(void);
+void start_workload(void);
 
 bench_result_t *get_preemption_result(void);
 bench_result_t *get_pendsv_result(void);

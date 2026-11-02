@@ -308,8 +308,11 @@ void print_bench_result(const char *name, bench_result_t *result) {
     p99 = calc_percentile(result, result->n * 99 / 100);
   }
   kprintf("%20s %5d %5d %5d %5d %d\r\n", name, result->n, p50, p99,
-          result->min ? result->min != 0xFFFFFFFF : 0, result->max);
+          result->n ? result->min : 0, result->max);
 }
+
+#define BENCH_N 20000
+#define WARMUP 1000
 
 void cli_cmd_bench(int argc, char **argv) {
   (void)argc;
@@ -318,9 +321,24 @@ void cli_cmd_bench(int argc, char **argv) {
   bench_result_t *pendsv_result = get_pendsv_result();
   bench_result_t *pre_fp_result = get_preemption_fp_result();
   bench_result_t *pendsv_fp_result = get_pendsv_fp_result();
-  bench_result_t syscall_result = bench_syscall_roundtrip();
   bench_result_t *irq_result = get_irq_result();
+  bench_reset();
+  start_workload();
+  while (pendsv_result->n + pendsv_fp_result->n < WARMUP)
+    sys_sleep(10);
+
+  bench_reset();
+  while (pendsv_result->n + pendsv_fp_result->n < BENCH_N)
+    sys_sleep(10);
+
+  bench_stop_flag = true;
+
+  bench_result_t syscall_result = bench_syscall_roundtrip();
   kprintf("----------------Benchmarks----------------\r\n");
+#ifdef BENCH_TAG
+  kprintf("%s ", BENCH_TAG);
+#endif
+  kprintf("N=%d\r\n", BENCH_N);
   kprintf("Name          Count     p50     p99      Min     Max\r\n");
   print_bench_result("Preemption", pre_result);
   print_bench_result("Preemption FP", pre_fp_result);

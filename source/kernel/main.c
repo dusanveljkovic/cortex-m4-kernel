@@ -74,19 +74,20 @@ int main() {
   cli->unprivileged = 0;
   tcb_t *idle_task = create_task(0xFF, idle_func, 0);
   idle_task->name = "IDLE";
+#if !BENCH
   tcb_t *user_task = create_task(1, user_main, 0);
   user_task->name = "user";
   tcb_t *net_t = create_task(0, net_task, 0);
   net_t->name = "net task";
   net_t->unprivileged = 0;
+#endif
 
-  kprintf("[boot] Initializing tasks: %s, %s, %s, %s\r\n", cli->name,
-          idle_task->name, user_task->name, net_t->name);
-
-  scheduler_put_task(user_task);
   scheduler_put_task(idle_task);
   scheduler_put_task(cli);
+#if !BENCH
+  scheduler_put_task(user_task);
   scheduler_put_task(net_t);
+#endif
 
   systick_init();
 
