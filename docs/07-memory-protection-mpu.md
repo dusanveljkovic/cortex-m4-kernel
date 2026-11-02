@@ -1,6 +1,6 @@
 # Memory Protection (MPU)
 
-**Files:** `source/kernel/mpu.c`, `include/mpu.h`, plus `tcb.c`'s
+**Files:** `source/kernel/mpu.c`, `include/kernel/mpu.h`, plus `tcb.c`'s
 `task_set_privilege` and the calls into `mpu_switch_to_task` from
 `pend_sv_handler.s`
 
@@ -23,7 +23,7 @@ cover. Unprivileged code gets no such fallback.
 
 ## The fourth region: per-task stack
 
-`MPU_REGION_TASK_STACK` (region 1) isn't set once - it's **reconfigured on
+`MPU_REGION_TASK_STACK` (region 1) is  **reconfigured on
 every context switch**. `pend_sv_handler.s` calls `mpu_switch_to_task(next)`
 before restoring the incoming task's registers, which calls
 `mpu_configure_task_stack(task->stack_base, task->stack_size)`, pointing
@@ -33,12 +33,8 @@ This is why task stacks needed to be power-of-two sized and naturally
 aligned (see [Memory Management](06-memory-management.md)) - an MPU region's
 base address must be aligned to its own size.
 
-## What this leaves uncovered
+## Known gaps
 
-Peripheral registers (USART2, RCC, GPIO, etc.) and general SRAM outside the
-heap and the current task's stack - including every kernel global (the ready
-queue, `current_task`, the driver registry, `task_slots`) aren't covered by
-any region. When an unprivileged task need to access anything outside its 
-designated memory it need to call the respective syscall. By using this 
-we can successfully separate the task memory from the kernel.
-
+1. The DHCP task writes `FLASH` directly which it must not do
+2. The send path in network stack dereferences client pointers without validating them
+3. The current MPU configuration leaves portions of the memory unmapped and unusable

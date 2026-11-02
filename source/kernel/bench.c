@@ -116,6 +116,7 @@ void bench_reset(void) {
 typedef struct {
   semaphore_t *sem1;
   semaphore_t *sem2;
+  semaphore_t *sem3;
 } arg_wrap_t;
 
 static void ping_task(void *arg);
@@ -124,14 +125,16 @@ static void fpu_task(void *arg);
 volatile bool bench_stop_flag = false;
 
 void start_workload(void) {
-  semaphore_t *sem1 = sys_sem_create(0);
+  semaphore_t *sem1 = sys_sem_create(1);
   semaphore_t *sem2 = sys_sem_create(0);
+  semaphore_t *sem3 = sys_sem_create(0);
   arg_wrap_t *arg1 = (arg_wrap_t *)sys_malloc(sizeof(arg_wrap_t));
   arg1->sem1 = sem1;
   arg1->sem2 = sem2;
+  arg1->sem3 = sem3;
   sys_task_create(3, ping_task, arg1);
   sys_task_create(3, pong_task, arg1);
-  sys_task_create(3, fpu_task, 0);
+  sys_task_create(3, fpu_task, arg1);
 }
 
 bench_result_t *get_preemption_result(void) { return &preemption_result; }
@@ -143,24 +146,26 @@ bench_result_t *get_irq_result(void) { return &irq_result; }
 static void ping_task(void *arg) {
   arg_wrap_t *a = (arg_wrap_t *)arg;
   while (!bench_stop_flag) {
-    sys_sem_post(a->sem1);
-    sys_sem_wait(a->sem2);
+    sys_sem_wait(a->sem1);
+    sys_sem_post(a->sem2);
   }
 }
 
 static void pong_task(void *arg) {
   arg_wrap_t *a = (arg_wrap_t *)arg;
   while (!bench_stop_flag) {
-    sys_sem_post(a->sem2);
-    sys_sem_wait(a->sem1);
+    sys_sem_wait(a->sem2);
+    sys_sem_post(a->sem3);
   }
 }
 
 static void fpu_task(void *arg) {
-  (void)arg;
+  arg_wrap_t *a = (arg_wrap_t *)arg;
   float x = 1.0, y = 3.2;
   volatile float z = 0.0;
   while (!bench_stop_flag) {
+    sys_sem_wait(a->sem3);
+    sys_sem_post(a->sem1);
     z += x * y;
   }
 }

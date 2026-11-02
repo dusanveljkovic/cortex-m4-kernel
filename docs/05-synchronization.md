@@ -1,9 +1,9 @@
 # Synchronization: Semaphores & Mutexes
 
-**Files:** `source/kernel/semaphore.c`, `include/semaphore.h`
+**Files:** `source/kernel/semaphore.c`, `include/kernel/semaphore.h`, 
+`source/kernel/static_memory.c`
 
-Both semaphores and mutexes are heap-allocated (`SYS_SEM_CREATE`/
-`SYS_MUTEX_CREATE` call `kmalloc`), not drawn from a static pool.
+Both semaphores and mutexes come from static pools of 64 slots each.
 
 ## Semaphores
 
@@ -29,7 +29,7 @@ A standard counting semaphore: `count`, a FIFO wait queue, and a `state`
 
 Every operation runs inside `irq_save()`/`irq_restore()`.
 
-## Mutexes: priority inheritance
+## Mutexes and priority inheritance
 
 A plain lock/unlock mutex would let a low-priority task holding a lock block
 a high-priority task waiting on it indefinitely, while medium-priority tasks
@@ -56,12 +56,18 @@ mutex is released, via `task_recalculate_priority` (in `tcb.c`), which scans
 everything the task *still* owns and sets `effective_priority` back to the
 highest boost still justified.
 
-A task's currently-held mutexes form a linked list through
-`owned_mutexes`/`next_owned` (`mutex_queue_push`/`_remove`, private to
-`semaphore.c`) — this is what `task_recalculate_priority` walks, and what the
-CLI's `mutex` command walks to print ownership.
+The boost propagates transitively, if a waiter is itself boosted the holder it is 
+waiting for inherts that raised priority too. 
 
 Locking your own already-held mutex returns `MUTEX_DEADLOCK` rather than
 blocking forever. Unlocking a mutex you don't own returns `MUTEX_NOT_OWNER`.
-Note there's no `SYS_MUTEX_CLOSE` syscall wired up — `mutex_close` exists in
-the header but nothing currently calls it.
+
+## Invariants
+1. Every semaphore and mutex operation is atomic with respect to interrupts
+2. A task's `effective_priority` is at least its base priority, and exactly 
+the highest of its own priority and the priorities of the tasks waiting on mutexes 
+it holds.
+3. A mutex has at most one owner
+
+## Known gaps
+1. The implementation is not deadlock-free. A cycle across multiple mutexes is not detected.

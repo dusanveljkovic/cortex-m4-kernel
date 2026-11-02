@@ -1,7 +1,7 @@
 # USART2 Driver
 
-**Files:** `source/drivers/usart.c`, `source/drivers/usart.h`,
-`source/drivers/usart_driver.c`, `include/gpio.h`, `include/nvic.h`
+**Files:** `source/drivers/usart.c`, `include/drivers/usart.h`,
+`source/drivers/usart_driver.c`, `include/kernel/gpio.h`, `include/kernel/nvic.h`
 
 ## Pins and role
 

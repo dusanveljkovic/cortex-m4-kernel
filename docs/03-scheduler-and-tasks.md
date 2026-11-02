@@ -3,8 +3,8 @@
 **Files:** `source/kernel/scheduler.c`, `source/kernel/tcb.c`,
 `source/kernel/systick.c`, `source/kernel/sleep.c`,
 `source/kernel/task_stack_init.s`, `source/kernel/pend_sv_handler.s`,
-`include/scheduler.h`, `include/tcb.h`, `include/systick.h`,
-`include/sleep.h`
+`include/kernel/scheduler.h`, `include/kernel/tcb.h`, `include/kernel/systick.h`,
+`include/kernel/sleep.h`
 
 ## Task states
 
@@ -34,11 +34,13 @@ typedef struct tcb {
   uint8_t unprivileged;          // 1 unless explicitly cleared (see tcb.c)
   uint32_t wake_tick;            // set by sleep_for_ticks()
   void *waiting_on;               // the semaphore/mutex this task is blocked on, if any
+  wait_type_t waiting_on_type;
   struct mutex *owned_mutexes;    // linked list of mutexes this task currently holds
 } tcb_t;
 ```
 
 Priority is a single byte where **lower numbers mean higher priority**. 
+
 ## Creating a task
 
 `create_task(priority, func, args)`:
@@ -53,7 +55,7 @@ Priority is a single byte where **lower numbers mean higher priority**.
    switch into a brand-new task indistinguishable, from the context-switch
    code's point of view, from switching into a task that's merely been
    interrupted before.
-4. The task doesn't start executing `function` directly — its stack frame's
+4. The task doesn't start executing `function` directly, its stack frame's
    `PC` points at a small trampoline that calls `function(args)` and then
    calls `sys_task_exit()` if `function` ever returns, so a task "finishing"
    is handled the same way regardless of whether it loops forever or returns.

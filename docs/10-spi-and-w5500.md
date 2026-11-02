@@ -1,7 +1,7 @@
 # SPI1 & W5500 Ethernet
 
-**Files:** `source/drivers/spi.c/.h`, `source/drivers/w5500.c/.h`,
-`include/gpio.h`
+**Files:** `source/drivers/spi.c`, `source/drivers/w5500.c`,
+`include/kernel/gpio.h`, `include/drivers/spi.h`, `include/drivers/w5500.h`
 
 ## SPI1
 
@@ -30,33 +30,47 @@ there's no way to "only send" or "only receive" at the hardware level.
 ## W5500
 
 The W5500 is an SPI-attached hardware TCP/IP offload chip. Every transaction
-uses a fixed 3-byte frame header which consists of 16-bit register address, then a control
-byte encoding which internal "block" you're addressing and the read/write
+uses a fixed 3-byte frame header which consists of 16-bit register address, then a control byte encoding which internal "block" you're addressing and the read/write
 direction, followed by a data phase, all under one CS assertion:
 
 ```c
-static void w5500_write(uint16_t addr, uint8_t bsb, const uint8_t *data, uint16_t len) {
-  uint8_t control = (bsb << 3) | W5500_CTRL_RWB_WRITE | W5500_CTRL_OM_VDM;
-  spi1_cs_select();
-  spi1_transfer((addr >> 8) & 0xFF);
-  spi1_transfer(addr & 0xFF);
-  spi1_transfer(control);
-  spi1_write(data, len);
-  spi1_cs_deselect();
+/*
+ * Builds a w5500 header with supplied BSB and address then sends
+ * it through spi.
+ * Maps the spi status into w5500 status are returns it
+ */
+static w5500_status_t w5500_transfer(uint16_t addr, uint8_t bsb,
+                                     spi_frame_t *frame) {
+  uint8_t control =
+      (bsb << 3) | W5500_CTRL_OM_VDM |
+      (frame->is_read == true ? W5500_CTRL_RWB_READ : W5500_CTRL_RWB_WRITE);
+  uint8_t h[3];
+  h[0] = (addr >> 8) & 0xFF;
+  h[1] = (addr & 0xFF);
+  h[2] = control;
+
+  spi_frame_t my_frame = {.header = h,
+                          .header_len = 3,
+                          .tx_data = frame->tx_data,
+                          .rx_data = frame->rx_data,
+                          .is_read = frame->is_read,
+                          .data_len = frame->data_len};
+
+  spi_return_t spi_ret = spi1_transfer_frame(&my_frame);
+  switch (spi_ret) {
+  case SPI_ERR_ARG:
+    return W5500_ERR_ARG;
+  case SPI_ERR_TIMEOUT:
+    return W5500_ERR_TRANSIENT;
+  case SPI_ERR_FAULT:
+    return W5500_ERR_FAULT;
+  case SPI_OK:
+    return W5500_OK;
+  }
+  return W5500_ERR_FAULT;
+}
 }
 ```
-
-### Current scope
-
-As it stands, this driver covers **chip bring-up and two diagnostics only**:
-
-- `w5500_init(mac, ip, gateway, subnet)` - resets the chip (see below) and
-  writes the MAC/IP/gateway/subnet mask into the common register block.
-- `w5500_get_version()` - reads `VERSIONR`, which should always read back
-  `0x04` on a genuine W5500.
-- `w5500_link_up()` - reads the `LNK` bit out of `PHYCFGR`.
-
-There is currently **no socket-level API** 
 
 ### Reset sequence, and where it can be called from
 
@@ -79,3 +93,9 @@ task, after the scheduler is running, not from `main()` before
 task yet (`current_task == 0`), so calling this before the scheduler starts
 would skip the delay entirely without any error - the chip likely wouldn't
 be ready yet when the subsequent register writes happen.
+
+## Socket API
+
+`w5500_socket_open`, `w5500_socket_close`, `w5500_socket_recv` and `w5500_socket_send` wrap the socket state machine: command in `Sn_CR`, completion observed in `Sn_SR` and `Sn_IR`.
+`w5500_init` also writes the MAC, IP, gateway and subnet, and `w5500_get_version` reads
+`VERSIONR`, which returns `0x04` on a genuine part.

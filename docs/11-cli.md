@@ -1,6 +1,6 @@
 # Debug CLI
 
-**File:** `source/kernel/cli.c`, `include/cli.h`
+**File:** `source/kernel/cli.c`, `include/kernel/cli.h`
 
 A minimal interactive shell over the console, running as its own task
 (`cli_task`, created and queued in `main.c`). See the [README](../README.md)
@@ -33,4 +33,10 @@ linker-provided symbols (`_heap_start`/`_end`, `_vma_data_start`/`_end`,
 `SCB->AIRCR` directly to request a system reset, with `__DSB()` barriers
 before and after to make sure the write has actually taken effect before
 anything else can happen.
+
+## The bench command
+
+`bench` runs a measurement. It resets the counters and starts the workload collecting 
+20,000 data points, then snapshots the statistics and prints them. 
+The measurements themselves and what they show are in [Metrics and verification](15-metrics-and-verification.md)
 

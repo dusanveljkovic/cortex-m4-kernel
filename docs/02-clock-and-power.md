@@ -1,7 +1,7 @@
 # Clock & Power
 
-**Files:** `source/kernel/clock.c`, `include/clock.h`, `include/rcc.h`,
-`include/flash.h`
+**Files:** `source/kernel/clock.c`, `include/kernel/clock.h`, `include/kernel/rcc.h`,
+`include/kernel/flash.h`
 
 ## What it configures
 

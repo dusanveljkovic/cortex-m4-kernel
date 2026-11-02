@@ -1,19 +1,18 @@
 # Driver Framework, Console & printf
 
-**Files:** `source/kernel/driver.c`, `include/driver.h`,
-`source/kernel/console.c`, `include/console.h`,
-`source/kernel/kprintf.c`, `include/kprintf.h`,
-`source/user/uprintf.c`, `source/user/uprintf.h`,
-`source/kernel/ring_buffer.c`, `include/ring_buffer.h`
+**Files:** `source/kernel/driver.c`, `include/kernel/driver.h`,
+`source/kernel/console.c`, `include/kernel/console.h`,
+`source/kernel/kprintf.c`, `include/kernel/kprintf.h`,
+`source/user/uprintf.c`, `include/user/uprintf.h`,
+`source/kernel/ring_buffer.c`, `include/kernel/ring_buffer.h`
 
 ## The point of this layer
 
 `kprintf` (and everything above it) knows nothing about USART2 or any other
-specific piece of hardware. It only knows about the **console**, which fans
-output out to whatever **drivers** are attached to it. Swapping or adding an
-output - say, logging over a W5500 socket as well as USART2 - is a matter of
-writing one more `driver_t` and attaching it; nothing above the driver layer
-changes.
+specific piece of hardware. It only knows about the cosnole, which fans
+output out to whatever drivers are attached to it. Swapping or adding an
+output is a matter of writing one more `driver_t` and attaching it, nothing 
+above the driver layer changes.
 
 ```
 kprintf / uprintf      formats into a local buffer
@@ -58,7 +57,7 @@ whole formatted string, so output from different tasks rarely interleaves
 mid-message in practice; there's no hard guarantee of that without adding a
 console-level mutex on top.
 
-## `kprintf` / `kpanicf` / `uprintf`: three ways to print
+## Three ways to print
 
 All three share the same formatting engine (`kvsnprintf`), and differ only in
 who's allowed to call them and which output path they use:
@@ -66,7 +65,7 @@ who's allowed to call them and which output path they use:
 | Function | Who can call it | Output path |
 |---|---|---|
 | `kprintf` | Privileged code only (touches console state) | `console_write` (normal, interrupt-driven) |
-| `kpanicf` | Fault handlers | `console_write_sync` (polled — doesn't need interrupts to work) |
+| `kpanicf` | Fault handlers | `console_write_sync` (polled - doesn't need interrupts to work) |
 | `uprintf` | Unprivileged tasks | Formats locally, then calls the `SYS_CONSOLE_WRITE` syscall |
 
 Separating formatting from output matters here specifically because
@@ -77,13 +76,12 @@ unprivileged code, unlike `kprintf` itself.
 ### The printf subset
 
 `%c %s %d %i %u %x %X %p %%`, plus a `0` padding flag and a numeric width
-(e.g. `%08x`, `%5d`). No floating point, no 64-bit values, no `%l` length
-modifiers.
+(e.g. `%08x`, `%5d`)
 
 `kprintf`/`kpanicf` use a 128-byte stack buffer; `uprintf` uses 96 bytes
-(smaller, since it runs on a task's own, much smaller stack). Longer output
+(smaller since it runs on the user tasks stack). Longer output
 is truncated, matching `snprintf` semantics. The return value reports what
-the *full* length would have been.
+the full length would have been.
 
 ## The ring buffer
 

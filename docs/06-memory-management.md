@@ -1,7 +1,7 @@
 # Memory Management
 
-**Files:** `source/kernel/heap.c`, `include/heap.h`,
-`source/kernel/static_memory.c`, `include/static_memory.h`
+**Files:** `source/kernel/heap.c`, `include/kernel/heap.h`,
+`source/kernel/static_memory.c`, `include/kernel/static_memory.h`
 
 There are two entirely separate memory pools, backing different kinds of
 allocation:
@@ -9,15 +9,21 @@ allocation:
 ## Static pools: tasks and their stacks
 
 ```c
-#define N_TASKS 16
-#define TASK_STACK_SIZE 1024
+#define N_TASKS          8
+#define N_SEMAPHORES    64
+#define N_MUTEXES       64
+#define N_SOCKETS        8
+#define TASK_STACK_SIZE 2048
 
 static tcb_t task_slots[N_TASKS];
+static semaphore_t sem_slots[N_SEMAPHORES];
+static mutex_t mutex_slots[N_MUTEXES];
+static socket_t socket_slots[N_SOCKETS];
 __attribute__((aligned(TASK_STACK_SIZE)))
 static uint8_t task_stacks[N_TASKS][TASK_STACK_SIZE];
 ```
 
-Fixed arrays, no dynamic sizing. `alloc_task()` scans for a slot that's
+`alloc_task()` scans for a slot that's
 `TASK_UNUSED` or `TASK_FINISHED` and claims it, setting `stack_base`/
 `stack_size` to point at that slot's row of `task_stacks`. The whole scan
 runs inside `irq_save()`/`irq_restore()` so two overlapping allocation

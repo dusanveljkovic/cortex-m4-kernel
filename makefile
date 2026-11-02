@@ -1,7 +1,7 @@
 PROGRAM = program
-BENCH = 0
+BENCH = 1
 BENCH_IRQ = 0
-OPT = -O0
+OPT = -O2
 BUILD_DIR = build$(if $(filter 1,$(BENCH)),-bench)
 DEBUG_ENABLED = 1
 

@@ -346,6 +346,10 @@ void cli_cmd_bench(int argc, char **argv) {
   print_bench_result("Pendsv FP", pendsv_fp_result);
   print_bench_result("Syscall roundtrip", &syscall_result);
   print_bench_result("IRQ masked", irq_result);
-  kprintf("Worst interrupts-masked window %d cycles in %x\r\n", irq_result->max,
-          bench_irq_site);
+  if (irq_result->n != 0) {
+    kprintf("Worst interrupts-masked window %d cycles in %x\r\n",
+            irq_result->max, bench_irq_site);
+  } else {
+    kprintf("Worst interrupts-masked window not measured\r\n");
+  }
 }

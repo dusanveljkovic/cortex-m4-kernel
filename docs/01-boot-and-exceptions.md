@@ -1,8 +1,8 @@
 # Boot & Exceptions
 
 **Files:** `source/kernel/startup_code.s`, `source/kernel/handlers.s`,
-`source/kernel/debug_handlers.c`, `include/scb.h`, `include/nvic.h`,
-`include/arm.h`, `linker_script.ld`
+`source/kernel/debug_handlers.c`, `include/kernel/scb.h`, `include/kernel/nvic.h`,
+`include/kernel/arm.h`, `linker_script.ld`
 
 ## The vector table and reset
 
@@ -33,7 +33,7 @@ Set once, in `main()`, via `NVIC_SET_PRIORITY`/`SCB_SET_PRIORITY`:
 | USART2 IRQ | `0xC0` |
 | SVCall     | `0xD0` |
 | SysTick    | `0xE0` |
-| PendSV     | `0xF0` (lowest) |
+| PendSV     | `0xF0` |
 
 PendSV is the lowest priority exception so a switch never happens in the 
 middle of another exception. USART2 is the highest because a byte arriving 
