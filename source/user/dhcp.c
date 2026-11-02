@@ -253,6 +253,8 @@ typedef struct {
 static dhcp_dest_t dhcp_chose_destination(const dhcp_msg_t *req,
                                           const uint8_t yiaddr[4],
                                           const dhcp_cfg_t *cfg, bool is_nak) {
+  (void)cfg;
+  (void)is_nak;
   dhcp_dest_t dest;
   uint8_t zero_addr[4] = {0, 0, 0, 0};
   uint8_t broadcast_addr[4] = {255, 255, 255, 255};
@@ -349,12 +351,13 @@ static void serialize_record(lease_slot_t *slot, uint8_t addr[4],
 static void load_lease_table(lease_table_t *table, bool *should_compact);
 static void journal_compact(lease_table_t *table);
 
-lease_table_t lease_table = {0, 0};
+lease_table_t lease_table;
 lease_table_t *get_dhcp_lease_table(void) { return &lease_table; }
 
-static socket_t *start_dhcp_server(dhcp_cfg_t *cfg) {
+static socket_t *start_dhcp_server() {
   socket_t *socket = sys_socket_get(0);
-  net_reply_t reply_slot = {0, 0, 0, 0, 0};
+  net_reply_t reply_slot;
+  memset(&reply_slot, 0, sizeof(net_reply_t));
 
   socket->protocol = UDP;
   socket->port = DHCP_SERVER_PORT;
@@ -401,8 +404,9 @@ void dhcp_task(void *args) {
   uprintf("[dhcp] Starting server...\r\n");
   dhcp_cfg_t *cfg = (dhcp_cfg_t *)args;
 
-  socket_t *socket = start_dhcp_server(cfg);
-  net_reply_t reply_slot = {0, 0, 0, 0, 0};
+  socket_t *socket = start_dhcp_server();
+  net_reply_t reply_slot;
+  memset(&reply_slot, 0, sizeof(net_reply_t));
   if (socket == 0) {
     uprintf("[dhcp][!] Couldn't start\r\n");
     return;
@@ -432,7 +436,7 @@ void dhcp_task(void *args) {
       }
 
       uprintf("[dhcp] Received message:\r\n");
-      dhcp_msg_print(received_msg, reply_slot.got, net_buffer);
+      dhcp_msg_print(received_msg);
 
       if (received_msg->op != BOOTREQUEST || !received_msg->has_message_type) {
         uprintf("[dhcp] Message is not bootrequest or has no message type\r\n");
@@ -471,7 +475,8 @@ void dhcp_task(void *args) {
           if (dhcp_status != DHCP_OK) {
             break;
           }
-          net_send_args_t zero_args = {0, 0, 0, 0, 0, 0};
+          net_send_args_t zero_args;
+          memset(&zero_args, 0, sizeof(net_send_args_t));
           if (memcmp(&ack_args, &zero_args, sizeof(net_send_args_t)) == 0)
             break;
 
@@ -668,8 +673,8 @@ static dhcp_status_t dhcp_handle_request(const dhcp_msg_t *received_msg,
 }
 
 #define JOURNAL_VER 1
-static uint8_t header_magic[4] = "LHDR";
-static uint8_t record_magic[4] = "LSLT";
+static uint8_t header_magic[4] = {0x4c, 0x48, 0x44, 0x52}; // "LHDR"
+static uint8_t record_magic[4] = {0x4c, 0x53, 0x4c, 0x54}; // "LSLT"
 
 static void serialize_record(lease_slot_t *slot, uint8_t addr[4],
                              uint8_t buffer[32]) {
@@ -773,6 +778,8 @@ static void load_lease_table(lease_table_t *table, bool *should_compact) {
     }
 
     uint8_t idx = slot_buffer[9] - table->start_addr[3];
+    if (idx >= table->size)
+      continue;
     table->slots[idx].state = slot_buffer[4];
     table->slots[idx].key_len = slot_buffer[5];
     table->slots[idx].expires_at = slot_buffer[10] | (slot_buffer[11] << 8) |

@@ -26,7 +26,6 @@ int console_attach(const driver_t *drv) {
 
 int console_detach(const driver_t *drv) {
   uint32_t irq_state = irq_save();
-  int free_slot = -1;
   for (int i = 0; i < CONSOLE_MAX_SINKS; i++) {
     if (sinks[i] == drv)
       sinks[i] = 0;

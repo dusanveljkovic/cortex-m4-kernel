@@ -9,7 +9,7 @@
 static void spi1_cs_select(void) { GPIO_PIN_LOW(GPIOA, SPI1_PIN_CS); }
 static void spi1_cs_deselect(void) { GPIO_PIN_HIGH(GPIOA, SPI1_PIN_CS); }
 
-static mutex_t spi1_lock = {0, 0, 0, 0};
+static mutex_t spi1_lock;
 static spi_state_t state = SPI_ST_UNINIT;
 
 /* Configure the needed registers (RCC, GPIO, SPI1)
@@ -71,7 +71,7 @@ spi_return_t spi1_recover(void) {
 
   state = SPI_ST_UNINIT;
   spi1_configure();
-  volatile uint8_t drain = (uint8_t)SPI1->DR;
+  (void)SPI1->DR;
   state = SPI_ST_READY;
 
   sys_mutex_unlock(&spi1_lock);

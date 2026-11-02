@@ -5,7 +5,7 @@
 #include "../../include/kernel/syscall.h"
 #include <stdbool.h>
 
-static net_request_t current_req = {0, 0, 0, 0, 0, 0, 0};
+static net_request_t current_req;
 static semaphore_t *net_posted, *net_done;
 
 void net_send_request(net_request_t *req) {
@@ -16,6 +16,7 @@ void net_send_request(net_request_t *req) {
 bool net_will_wait(void) { return (semaphore_wait(net_done) == SEM_OK_YIELD); }
 
 void net_task(void *_a) {
+  (void)_a;
   net_posted = sys_sem_create(0);
   net_done = sys_sem_create(0);
 
@@ -108,6 +109,7 @@ void net_task(void *_a) {
     }
     case W5500_ERR_FAULT: {
       spi_return_t spi_ret = spi1_recover();
+      (void)spi_ret;
       my_req.reply_slot->status = NET_STATUS_FAULT;
       break;
     }

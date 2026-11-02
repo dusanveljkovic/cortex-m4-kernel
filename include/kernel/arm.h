@@ -19,17 +19,13 @@ static inline uint32_t irq_save(void) {
   return primask;
 }
 #if BENCH_IRQ
-__attribute__((noinline))
-#endif
+__attribute__((noinline)) void irq_restore(uint32_t primask);
+#else
 static inline void irq_restore(uint32_t primask) {
-#if BENCH_IRQ
-  if (!(primask & 1u)) {
-    uint32_t d = DWT->CYCCNT - bench_irq_t0;
-    update_irq_result(d, (uint32_t)__builtin_return_address(0));
-  }
-#endif
   asm volatile("msr primask, %0" : : "r"(primask) : "memory");
 }
+#endif
+
 void request_context_switch(void);
 
 static inline uint32_t get_IPSR() {

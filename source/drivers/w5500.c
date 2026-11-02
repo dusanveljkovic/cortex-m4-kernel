@@ -365,7 +365,7 @@ w5500_status_t w5500_socket_recv(socket_t *socket, uint8_t *buffer,
     *truncated = false;
     return W5500_OK;
   }
-  udp_header_t header = {0, 0, 0};
+  udp_header_t header = {{0, 0, 0, 0}, 0, 0};
   uint16_t read_pointer = 0;
   ret_status = w5500_recv_udp_header(socket, &header, &read_pointer);
   if (ret_status != W5500_OK) {

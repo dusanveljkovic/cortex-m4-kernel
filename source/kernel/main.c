@@ -17,13 +17,12 @@
 #include "../../include/kernel/systick.h"
 #include "../../include/kernel/tcb.h"
 
-static uint32_t data = 0;
-
 extern void user_main(void *);
 extern uint8_t _heap_start;
 extern uint8_t _heap_end;
 
 void idle_func(void *a) {
+  (void)a;
   while (1)
     ;
 }

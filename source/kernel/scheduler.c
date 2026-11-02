@@ -37,7 +37,7 @@ void scheduler_put_task(tcb_t *task) {
 void scheduler_select_next(void) {
   uint32_t irq_state = irq_save();
 
-  scheduler_put_task(current_task);
+  scheduler_put_task((tcb_t *)current_task);
 
   if (ready_queue.head != 0) {
     next_task = priority_queue_pop(&ready_queue);

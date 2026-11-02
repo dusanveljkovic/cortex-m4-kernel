@@ -90,7 +90,7 @@ void dhcp_print_msg_type(dhcp_msg_type_t msg_type) {
   }
 }
 
-void dhcp_msg_print(dhcp_msg_t *msg, uint16_t len, uint8_t *buffer) {
+void dhcp_msg_print(dhcp_msg_t *msg) {
   uprintf("OP: %d HTYPE: %d HLEN: %d HOPS: %d\r\n", msg->op, msg->htype,
           msg->hlen, msg->hops);
   uprintf("XID: %x%x%x%x\r\n", msg->xid[0], msg->xid[1], msg->xid[2],

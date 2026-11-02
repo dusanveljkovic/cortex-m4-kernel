@@ -40,7 +40,7 @@ void sleep_for_ticks(uint32_t ticks) {
 
   current_task->state = TASK_SLEEPING;
   current_task->wake_tick = system_ticks + ticks;
-  sleep_queue_push(&sleep_list, current_task);
+  sleep_queue_push(&sleep_list, (tcb_t *)current_task);
 
   irq_restore(irq_state);
 }

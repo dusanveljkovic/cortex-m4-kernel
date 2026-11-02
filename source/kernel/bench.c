@@ -32,7 +32,7 @@ static inline void update_result(bench_result_t *result, uint32_t new_reading) {
   uint16_t bucket = new_reading >> 3; // 8 cycle resolution
   if (bucket >= HIST_BUCKETS) {
     result->overflow++;
-    bucket = 127;
+    bucket = HIST_BUCKETS - 1;
   }
   result->hist[bucket]++;
 
@@ -74,6 +74,10 @@ uint32_t calc_percentile(bench_result_t *result, uint32_t target) {
     }
     cum += result->hist[b];
   }
+  if (val < result->min)
+    val = result->min;
+  if (val > result->max)
+    val = result->max;
   return val;
 }
 

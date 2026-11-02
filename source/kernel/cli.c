@@ -81,6 +81,7 @@ int cli_input_char(char c) {
 }
 
 void cli_task(void *arg) {
+  (void)arg;
   kprintf("\r\nCLI\r\n");
   kprintf("> ");
 
@@ -97,7 +98,7 @@ void cli_task(void *arg) {
 void cli_execute(const char *line) {
   if (line[0] == '\0')
     return;
-  for (int i = 0; i < (sizeof(commands) / sizeof(cli_command_t)); i++) {
+  for (uint16_t i = 0; i < (sizeof(commands) / sizeof(cli_command_t)); i++) {
     const cli_command_t *cmd = &commands[i];
     if (strcmp(cmd->name, line) == 0) {
       cmd->function(0, 0);
@@ -108,6 +109,8 @@ void cli_execute(const char *line) {
 }
 
 void cli_cmd_ps(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   kprintf("PID\tNAME\tSTATE\tPRI EPRI\tSP\r\n");
   kprintf("--------------------------------------\r\n");
 
@@ -145,12 +148,16 @@ void cli_cmd_ps(int argc, char **argv) {
 }
 
 void cli_cmd_help(int argc, char **argv) {
-  for (int i = 0; i < (sizeof(commands) / sizeof(cli_command_t)); i++) {
+  (void)argc;
+  (void)argv;
+  for (uint16_t i = 0; i < (sizeof(commands) / sizeof(cli_command_t)); i++) {
     const cli_command_t *cmd = &commands[i];
     kprintf("%s > %s\r\n", cmd->name, cmd->description);
   }
 }
 void cli_cmd_uptime(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   kprintf("Uptime: %u ms\r\n", system_ticks);
 }
 
@@ -165,6 +172,8 @@ extern uint8_t _heap_end;
 #define SRAM_END 0x20020000
 
 void cli_cmd_mem(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   uintptr_t data_start = (uintptr_t)&_vma_data_start;
   uintptr_t data_end = (uintptr_t)&_vma_data_end;
 
@@ -194,6 +203,8 @@ void cli_cmd_mem(int argc, char **argv) {
   kprintf("  end     : %x\r\n", (uint32_t)heap_end);
 }
 void cli_cmd_heap(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   uintptr_t heap_start = (uintptr_t)&_heap_start;
   uintptr_t heap_end = (uintptr_t)&_heap_end;
 
@@ -209,6 +220,8 @@ void cli_cmd_heap(int argc, char **argv) {
   kprintf("end     : %x\r\n", (uint32_t)heap_end);
 }
 void cli_cmd_mutex(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   kprintf("Mutexes\r\n");
   kprintf("----------------------------\r\n");
   kprintf("ID\tOWNER\tWAITING\r\n");
@@ -227,18 +240,24 @@ void cli_cmd_mutex(int argc, char **argv) {
 }
 
 void cli_cmd_link(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   int32_t status = -1;
-  net_reply_t reply_slot = {0, 0, 0, 0, 0};
+  net_reply_t reply_slot = {0, {0, 0, 0, 0}, 0, 0, 0};
   sys_net_link(&status, &reply_slot);
   kprintf("Link status: %d\r\n", status);
 }
 
 void cli_cmd_spioff(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   SPI1->CR1 &= ~SPI_CR1_SPE;
   kprintf("Spi turned off\r\n");
 }
 
 void cli_cmd_leasetable(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   kprintf("DHCP lease table: \r\n");
   lease_table_t *table = get_dhcp_lease_table();
   if (table->slots == 0 || table->size == 0) {
@@ -267,6 +286,8 @@ void cli_cmd_leasetable(int argc, char **argv) {
 }
 
 __attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   kprintf("Rebooting ...");
 
   __DSB();
@@ -286,11 +307,13 @@ void print_bench_result(const char *name, bench_result_t *result) {
     p50 = calc_percentile(result, result->n / 2);
     p99 = calc_percentile(result, result->n * 99 / 100);
   }
-  kprintf("%20s %5d %5d %5d %5d %5d\r\n", name, result->n, p50, p99,
-          result->min, result->max);
+  kprintf("%20s %5d %5d %5d %5d %d\r\n", name, result->n, p50, p99,
+          result->min ? result->min != 0xFFFFFFFF : 0, result->max);
 }
 
 void cli_cmd_bench(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
   bench_result_t *pre_result = get_preemption_result();
   bench_result_t *pendsv_result = get_pendsv_result();
   bench_result_t *pre_fp_result = get_preemption_fp_result();

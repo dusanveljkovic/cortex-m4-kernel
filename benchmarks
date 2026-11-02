@@ -1,0 +1,20 @@
+with BENCH_IRQ=1
+----------------Benchmarks----------------
+Name          Count     p50     p99      Min     Max
+          Preemption  9759  1147  1151   128 1340
+       Preemption FP 19423  1160  1167  1138 1511
+              Pendsv  9759  1075  1079   686 1575
+           Pendsv FP 19423  1092  1095  1069 1285
+   Syscall roundtrip  1000   405   425   405 880
+          IRQ masked 77931   116   535    69 576
+Worst interrupts-masked window 576 cycles in scheduler_select_next()
+
+with BENCH_IRQ=0
+----------------Benchmarks----------------
+Name          Count     p50     p99      Min     Max
+          Preemption  5953   947   951   565 1642
+       Preemption FP 11835   952   959   638 1141
+              Pendsv  5953   875   879   506 1568
+           Pendsv FP 11835   882   887   562 1082
+   Syscall roundtrip  1000   405   417   405 698
+          IRQ masked     0     0     0     0 0

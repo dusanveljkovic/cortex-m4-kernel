@@ -72,7 +72,8 @@ SECTIONS
 
     _heap_start = .;
 
-    . += 64K;
+    /* 4 KB for kernel stack */
+    . += 60K;
 
     _heap_end = .;
   } > SRAM

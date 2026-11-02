@@ -16,3 +16,13 @@ inline void request_context_switch(void) {
   __DSB();
   __ISB();
 }
+
+#if BENCH_IRQ
+void irq_restore(uint32_t primask) {
+  if (!(primask & 1u)) {
+    uint32_t d = DWT->CYCCNT - bench_irq_t0;
+    update_irq_result(d, (uint32_t)__builtin_return_address(0));
+  }
+  asm volatile("msr primask, %0" : : "r"(primask) : "memory");
+}
+#endif

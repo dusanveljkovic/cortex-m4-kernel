@@ -113,6 +113,7 @@ extern uint8_t _heap_start;
 extern uint8_t _heap_end;
 
 bool ptr_on_heap(uintptr_t ptr, uint32_t len, bool write) {
+  (void)write;
   if (ptr == 0 || ptr < (uintptr_t)&_heap_start ||
       (ptr + len) >= (uintptr_t)&_heap_end)
     return false;
@@ -124,6 +125,7 @@ bool ptr_on_heap(uintptr_t ptr, uint32_t len, bool write) {
 
 bool ptr_on_stack(uintptr_t ptr, uint32_t len, bool write,
                   volatile tcb_t *task) {
+  (void)write;
   if (ptr == 0 || ptr < (uintptr_t)task->stack_base ||
       (ptr + len) >= (uintptr_t)(task->stack_base + task->stack_size))
     return false;
@@ -286,7 +288,7 @@ void svc_dispatch(uintptr_t *frame) {
                          .caller = current_task,
                          .socket = socket,
                          .result = 0,
-                         .dst_ip = 0,
+                         .dst_ip = {0, 0, 0, 0},
                          .dst_port = 0,
                          .reply_slot = (net_reply_t *)arg1};
     net_send_request(&req);
@@ -301,7 +303,7 @@ void svc_dispatch(uintptr_t *frame) {
     net_request_t req = {.op = NET_OP_SOCKET_CLOSE,
                          .caller = current_task,
                          .socket = socket,
-                         .dst_ip = 0,
+                         .dst_ip = {0, 0, 0, 0},
                          .dst_port = 0,
                          .reply_slot = (net_reply_t *)arg1};
     net_send_request(&req);
@@ -313,7 +315,7 @@ void svc_dispatch(uintptr_t *frame) {
     net_request_t req = {.op = NET_OP_LINK,
                          .caller = current_task,
                          .socket = 0,
-                         .dst_ip = 0,
+                         .dst_ip = {0, 0, 0, 0},
                          .dst_port = 0,
                          .result = (int32_t *)arg0,
                          .reply_slot = (net_reply_t *)arg1};
@@ -331,7 +333,7 @@ void svc_dispatch(uintptr_t *frame) {
                          .socket = socket,
                          .buffer = (uint8_t *)arg1,
                          .buf_len = (uint16_t)arg2,
-                         .dst_ip = 0,
+                         .dst_ip = {0, 0, 0, 0},
                          .dst_port = 0,
                          .reply_slot = (net_reply_t *)arg3};
     net_send_request(&req);

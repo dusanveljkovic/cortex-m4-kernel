@@ -61,7 +61,6 @@ MCU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 
 FLAGS_DEBUG = -g3 $(OPT) -fdebug-prefix-map=$(CURDIR)=.
 
-
 FLAGS_AS =
 FLAGS_AS += $(MCU)
 ifeq ($(DEBUG_ENABLED), 1)
@@ -72,12 +71,13 @@ FLAGS_CC =
 FLAGS_CC += $(MCU)
 FLAGS_CC += -MMD -MP
 FLAGS_CC += -fno-builtin
+FLAGS_CC += -Wall -Wextra -std=gnu11 -ffreestanding
 FLAGS_CC += $(FLAGS_INCLUDE)
 ifeq ($(DEBUG_ENABLED), 1)
 	FLAGS_CC += $(FLAGS_DEBUG)
 endif
 ifeq ($(BENCH), 1)
-	FLAGS_CC += -DBENCH=1
+	FLAGS_CC += -DBENCH=1 -fno-omit-frame-pointer
 endif
 ifeq ($(BENCH_IRQ), 1)
 	FLAGS_CC += -DBENCH_IRQ=1

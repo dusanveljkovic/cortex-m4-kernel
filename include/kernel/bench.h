@@ -30,9 +30,9 @@ typedef struct {
 
 #define DWT_CTRL_CYCCNTENA (1u << 0)
 
-#define HIST_BUCKETS 128
+#define HIST_BUCKETS 256
 typedef struct {
-  uint16_t hist[HIST_BUCKETS]; // 128 buckets * 8 cycle resolution = 0 - 1023
+  uint16_t hist[HIST_BUCKETS]; // 256 buckets * 8 cycle resolution = 0 - 2047
   uint16_t overflow;
   uint32_t n, sum, min, max;
 } bench_result_t;

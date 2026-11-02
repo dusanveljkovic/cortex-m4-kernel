@@ -57,7 +57,6 @@ void mpu_set_region(uint32_t region, uintptr_t base, uint32_t size, uint32_t ap,
   rasr |= (ap << MPU_RASR_AP_Pos);
 
   uint32_t size_encoding = 0;
-  uint32_t region_size = size;
   size_encoding = 31 - __builtin_clz(size) - 1;
 
   rasr |= size_encoding << MPU_RASR_SIZE_Pos;

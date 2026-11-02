@@ -10,7 +10,7 @@
 int uprintf(const char *fmt, ...);
 void print_net_error(net_reply_t *reply);
 void print_dhcp_error(dhcp_status_t status);
-void dhcp_msg_print(dhcp_msg_t *msg, uint16_t len, uint8_t *buffer);
+void dhcp_msg_print(dhcp_msg_t *msg);
 void dhcp_print_msg_type(dhcp_msg_type_t msg_type);
 
 #endif
