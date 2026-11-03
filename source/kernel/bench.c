@@ -137,19 +137,7 @@ void start_workload(void) {
   sys_task_create(3, pong_task, arg1);
   sys_task_create(3, fpu_task, arg1);
 }
-`w5500_socket_open`, `w5500_socket_close`, `w5500_socket_recv` and `w5500_socket_send` wrap
-    the socket state machine
-    : command in `Sn_CR`,
-      completion observed in `Sn_SR` and `Sn_IR`.
-`w5500_init` also writes the MAC,
-      IP,
-      gateway and subnet,
-      and `w5500_get_version` reads
-`VERSIONR`,
-      which returns `0x04` on a genuine part.bench_result_t *
-      get_preemption_result(void) {
-  return &preemption_result;
-}
+bench_result_t *get_preemption_result(void) { return &preemption_result; }
 bench_result_t *get_pendsv_result(void) { return &pendsv_result; }
 bench_result_t *get_preemption_fp_result(void) { return &preemption_fp_result; }
 bench_result_t *get_pendsv_fp_result(void) { return &pendsv_fp_result; }

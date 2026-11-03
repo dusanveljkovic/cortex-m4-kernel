@@ -301,6 +301,7 @@ __attribute__((noreturn)) void cli_cmd_reboot(int argc, char **argv) {
     ;
 }
 
+#if BENCH
 void print_bench_result(const char *name, bench_result_t *result) {
   uint32_t p50 = 0, p99 = 0;
   if (result->n != 0) {
@@ -310,6 +311,7 @@ void print_bench_result(const char *name, bench_result_t *result) {
   kprintf("%20s %5d %5d %5d %5d %d\r\n", name, result->n, p50, p99,
           result->n ? result->min : 0, result->max);
 }
+#endif
 
 #define BENCH_N 20000
 #define WARMUP 1000
@@ -317,6 +319,7 @@ void print_bench_result(const char *name, bench_result_t *result) {
 void cli_cmd_bench(int argc, char **argv) {
   (void)argc;
   (void)argv;
+#if BENCH
   bench_result_t *pre_result = get_preemption_result();
   bench_result_t *pendsv_result = get_pendsv_result();
   bench_result_t *pre_fp_result = get_preemption_fp_result();
@@ -352,4 +355,8 @@ void cli_cmd_bench(int argc, char **argv) {
   } else {
     kprintf("Worst interrupts-masked window not measured\r\n");
   }
+#else
+  kprintf("Not a bench build. Set BENCH=1 and run from build-bench/ to use "
+          "this command\r\n");
+#endif
 }

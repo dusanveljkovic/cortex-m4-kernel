@@ -1,16 +1,16 @@
 PROGRAM = program
-BENCH = 1
+BENCH = 0
 BENCH_IRQ = 0
-OPT = -O2
+OPT = -O0
 BUILD_DIR = build$(if $(filter 1,$(BENCH)),-bench)
 DEBUG_ENABLED = 1
 
 SOURCE_S_LIST = \
-source/kernel/startup_code.s \
-source/kernel/task_stack_init.s \
-source/kernel/pend_sv_handler.s \
-source/kernel/handlers.s \
-source/kernel/sv_call_handler.s 
+source/kernel/startup_code.S \
+source/kernel/task_stack_init.S \
+source/kernel/pend_sv_handler.S \
+source/kernel/handlers.S \
+source/kernel/sv_call_handler.S 
 
 SOURCE_C_LIST = \
 source/kernel/arm.c \
@@ -47,13 +47,13 @@ FLAGS_INCLUDE = \
 -Iinclude \
 
 OBJECTS_LIST = 
-OBJECTS_LIST += $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCE_S_LIST:.s=.o)))
+OBJECTS_LIST += $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCE_S_LIST:.S=.o)))
 OBJECTS_LIST += $(addprefix $(BUILD_DIR)/, $(notdir $(SOURCE_C_LIST:.c=.o)))
-vpath %.s $(sort $(dir $(SOURCE_S_LIST)))
+vpath %.S $(sort $(dir $(SOURCE_S_LIST)))
 vpath %.c $(sort $(dir $(SOURCE_C_LIST)))
 
 CC = arm-none-eabi-gcc -c 
-AS = arm-none-eabi-gcc -c -x assembler
+AS = arm-none-eabi-gcc -c -x assembler-with-cpp
 LD = arm-none-eabi-ld 
 HX = arm-none-eabi-objcopy -O ihex
 
@@ -65,6 +65,9 @@ FLAGS_AS =
 FLAGS_AS += $(MCU)
 ifeq ($(DEBUG_ENABLED), 1)
 	FLAGS_AS += $(FLAGS_DEBUG)
+endif
+ifeq ($(BENCH), 1) 
+	FLAGS_AS += -DBENCH=1
 endif
 
 FLAGS_CC =
@@ -94,7 +97,7 @@ $(BUILD_DIR)/$(PROGRAM).hex : $(BUILD_DIR)/$(PROGRAM).elf
 $(BUILD_DIR)/$(PROGRAM).elf : $(OBJECTS_LIST) makefile
 	$(LD) -T $(LINKER_SCRIPT) -o $(@) $(OBJECTS_LIST)
 
-$(BUILD_DIR)/%.o : %.s makefile | $(BUILD_DIR)
+$(BUILD_DIR)/%.o : %.S makefile | $(BUILD_DIR)
 	$(AS) $(FLAGS_AS) -o $(@) $(<)
 
 $(BUILD_DIR)/%.o : %.c makefile | $(BUILD_DIR)

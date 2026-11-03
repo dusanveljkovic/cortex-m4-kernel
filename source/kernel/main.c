@@ -39,7 +39,9 @@ void fpu_init(void) {
 }
 
 int main() {
+#if BENCH
   enable_counter();
+#endif
   static_memory_init();
   heap_init(&_heap_start, (uint32_t)(&_heap_end - &_heap_start));
 

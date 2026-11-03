@@ -9,22 +9,26 @@
 .extern current_task
 .extern next_task
 
+#if BENCH
 .extern bench_pendsv_start
 .extern bench_pendsv_end
 .extern bench_pendsv_lr
 .extern bench_record_switch
+#endif
 
 .section .text.pend_sv_handler
 .type pend_sv_handler, %function
 .global pend_sv_handler
 .align 2
 pend_sv_handler:
+#if BENCH
   ldr r1, =0xE0001004
   ldr r1, [r1]
   ldr r2, =bench_pendsv_start
   str r1, [r2]
   ldr r2, =bench_pendsv_lr
   str lr, [r2]
+#endif
 
   isb 
 
@@ -76,6 +80,7 @@ skip_vldmia:
 
   isb
 
+#if BENCH
   ldr r1, =0xE0001004
   ldr r1, [r1]
   ldr r2, =bench_pendsv_end
@@ -84,5 +89,6 @@ skip_vldmia:
   mov r0, lr
   bl bench_record_switch
   mov lr, r0
+#endif
 
   bx lr

@@ -11,7 +11,9 @@ inline void request_context_switch(void) {
       (current_task->state == TASK_RUNNING &&
        candidate->effective_priority > current_task->effective_priority))
     return;
+#if BENCH
   bench_preemption_start = read_cycles();
+#endif
   SCB->ICSR |= ICSR_PENDSV_SET;
   __DSB();
   __ISB();
