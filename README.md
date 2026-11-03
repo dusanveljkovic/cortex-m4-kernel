@@ -1,7 +1,7 @@
 # Cortex-M4 Kernel
 
 **A preemptive real-time operating system for the STM32F446RE, written from the reset
-vector up, and built to run a DHCP server on a real network.**. There is no existing RTOS underneath
+vector up, and built to run a DHCP server on a real network.** There is no existing RTOS underneath
 or any library code except my own.  The vector table, the boot code, the context switch, 
 the syscall boundary, the memory protection setup, the allocator, the `printf` engine 
 and the network stack are all in this repository
@@ -36,15 +36,11 @@ kept turning up the requirements which had not been accounted for. The loop of w
 an abstraction, using it, watching it break and then fixing is the part of this project 
 I would most like a reader to look at.
 
-Real-time correctness is a statement about worst-case response time:
-
-$$R_i = C_i + I_i + B_i$$
-
-execution time, plus interference from higher-priority tasks, plus blocking. Preemption
-and priorities bound $I_i$. Priority inheritance bounds $B_i$. The tick and the critical
-sections bound the resolution that everything else is measured against. Each of those
-bounds is measured on the board here, and the [metrics table](#measured-behaviour) can be
-reproduced on hardware.
+Real-time correctness is about being able to calculate worst-case response time. The response time 
+calculation consists of $C_i$ (execution time), $I_i$ (interference from higher priority tasks) and 
+$B_i$ (blocking). Preemption and priorities bound $I_i$ and priority inheritance bounds $B_i$.
+Each of those bounds is measured on the board and the [metrics table](#measured-behaviour) can be 
+reproduced on hardware
 
 The W5500 performs ARP, IP, TCP and UDP in hardware, so there is no TCP/IP stack written
 from nothing. Instead this project includes the SPI driver, the socket state machine, the 
